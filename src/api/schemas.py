@@ -22,6 +22,7 @@ class SinglePredictionResponse(BaseModel):
     lab_recommendation: str
     assigned_cluster: Optional[int] = None
     cluster_profile: Optional[str] = None
+    cluster_model_used: Optional[str] = "K-Modes (Solo Síntomas)"
     disclaimer: str = (
         "Herramienta orientativa de apoyo a la decisión clínica para dengue en Argentina. "
         "No diagnostica, no descarta ni reemplaza la evaluación médica profesional ni las pruebas confirmatorias de laboratorio."

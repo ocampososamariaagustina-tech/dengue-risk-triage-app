@@ -69,6 +69,39 @@
         "1": "Perfil dengue típico (síntomas cardinales sin exantema)",
         "2": "Perfil dengue completo (síntomas cardinales con exantema)"
       }
+    },
+    "kmodes_sintomas": {
+      "name": "K-Modes Clustering (Solo Síntomas / Triage Fenotípico)",
+      "artifact_file": "modelo_kmodes_sinoutcoome.joblib",
+      "fallback_artifact_file": "modelo_kmodes_sintomas.joblib",
+      "n_clusters": 3,
+      "features": [
+        "Fever",
+        "Headache",
+        "Myalgia",
+        "Rash"
+      ],
+      "train_stats": {
+        "n_train": 1715,
+        "cost_total": 902.0,
+        "cost_per_obs": 0.52595,
+        "cluster_distribution": {
+          "0": {"count": 580, "pct": 0.3382},
+          "1": {"count": 523, "pct": 0.3050},
+          "2": {"count": 612, "pct": 0.3569}
+        }
+      },
+      "centroids": [
+        {"cluster": 0, "Fever": 0, "Headache": 0, "Myalgia": 0, "Rash": 0},
+        {"cluster": 1, "Fever": 1, "Headache": 1, "Myalgia": 1, "Rash": 0},
+        {"cluster": 2, "Fever": 1, "Headache": 1, "Myalgia": 1, "Rash": 1}
+      ],
+      "cluster_names": {
+        "0": "Perfil oligosintomático / sin síntomas cardinales",
+        "1": "Perfil sintomático típico (fiebre, cefalea, mialgia sin exantema)",
+        "2": "Perfil sintomático completo (fiebre, cefalea, mialgia y exantema)"
+      },
+      "clinical_utility": "Permite, dado un paciente febril en consultorio o guardia, ubicarlo inmediatamente en uno de los clusters clínicos fenotípicos basándose únicamente en sus 4 síntomas ('Fever', 'Headache', 'Myalgia', 'Rash'), sin requerir la variable de desenlace (Outcome) ni pruebas de laboratorio previas."
     }
   }
 }

@@ -14,8 +14,9 @@ Herramienta de **evaluación analítica y apoyo a la decisión clínica** para d
    - Exportación de CSV enriquecido con probabilidades, predicciones y nombres de perfil asignados.
 
 2. **Triage Clínico Individual:**
-   - Formulario de guardia/consultorio para estimar probabilidad condicionada y clasificar riesgo de dengue.
-   - Orientación sobre ventana diagnóstica recomendada según el algoritmo oficial argentino (0-3 días métodos directos NS1/PCR; 4-6 días combinado; 7+ días IgM).
+   - Formulario de guardia/consultorio para estimar probabilidad pre-test de dengue con CatBoost.
+   - **Clasificación fenotípica inmediata con K-Modes (Solo Síntomas):** permite, dado un paciente, ubicarlo en uno de los 3 clusters descriptivos a partir de sus 4 síntomas cardinales (`Fever`, `Headache`, `Myalgia`, `Rash`), sin requerir `Outcome` ni pruebas de laboratorio previas.
+   - Conducta y laboratorio racional según probabilidad y ventana epidemiológica (Safe Triage: no sobrecargar con NS1/PCR en baja probabilidad pre-test por bajo VPP; priorizar métodos directos/indirectos en alta probabilidad).
 
 ---
 
@@ -24,9 +25,10 @@ Herramienta de **evaluación analítica y apoyo a la decisión clínica** para d
 ```text
 dengue-risk-triage-app/
 ├── artifacts/
-│   ├── metadata.json              # Configuración, parámetros y baseline de desarrollo
-│   ├── modelo_catboost.joblib     # Modelo CatBoost con TunedThresholdClassifierCV
-│   └── modelo_kmodes.joblib       # Modelo K-Modes con 3 clusters
+│   ├── metadata.json                     # Configuración, parámetros y baseline de desarrollo
+│   ├── modelo_catboost.joblib            # Modelo CatBoost con TunedThresholdClassifierCV
+│   ├── modelo_kmodes.joblib              # Modelo K-Modes con Outcome (para hold-out)
+│   └── modelo_kmodes_sinoutcoome.joblib  # Modelo K-Modes solo síntomas (para triage de guardia)
 ├── dev/
 │   └── sample_holdout.csv         # Dataset de prueba para evaluación inmediata
 ├── src/

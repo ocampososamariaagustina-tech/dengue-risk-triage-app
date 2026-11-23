@@ -26,7 +26,8 @@ def test_full_pipeline():
     assert health_resp.version == "1.0.0"
     assert health_resp.model_registry["models"]["catboost"]["loaded"] is True
     assert health_resp.model_registry["models"]["kmodes"]["loaded"] is True
-    print(f" -> Health OK: CatBoost hash={health_resp.model_registry['models']['catboost']['sha256'][:10]}...")
+    assert health_resp.model_registry["models"]["kmodes_sintomas"]["loaded"] is True
+    print(f" -> Health OK: CatBoost hash={health_resp.model_registry['models']['catboost']['sha256'][:10]}, K-Modes Síntomas cargado.")
 
     print("\n[3/5] Probando Endpoint POST /evaluate con sample_holdout.csv...")
     sample_csv_path = PROJECT_ROOT / "dev" / "sample_holdout.csv"
@@ -73,11 +74,13 @@ def test_full_pipeline():
     single_res = predict_single_patient(patient)
     assert single_res.status == "ok"
     assert single_res.prediction == 1
+    assert single_res.assigned_cluster == 1
     assert "Fase temprana" in single_res.lab_recommendation
     print(f" -> Caso Alta Probabilidad: {single_res.diagnosis_suggested}")
     print(f"    - Probabilidad: {single_res.probability}")
     print(f"    - Prioridad: {single_res.clinical_priority}")
     print(f"    - Conducta / Laboratorio: {single_res.lab_recommendation}")
+    print(f"    - Cluster Fenotípico K-Modes: {single_res.cluster_profile} (Cluster {single_res.assigned_cluster})")
 
     # Caso Baja Probabilidad (Triage negativo / Descarte)
     patient_low = PatientInput(
@@ -91,12 +94,14 @@ def test_full_pipeline():
     res_low = predict_single_patient(patient_low)
     assert res_low.status == "ok"
     assert res_low.prediction == 0
+    assert res_low.assigned_cluster == 0
     assert res_low.clinical_priority == "Baja"
     assert "No indicar NS1 ni PCR" in res_low.lab_recommendation
     print(f" -> Caso Baja Probabilidad: {res_low.diagnosis_suggested}")
     print(f"    - Probabilidad: {res_low.probability}")
     print(f"    - Prioridad: {res_low.clinical_priority}")
     print(f"    - Conducta / Laboratorio: {res_low.lab_recommendation}")
+    print(f"    - Cluster Fenotípico K-Modes: {res_low.cluster_profile} (Cluster {res_low.assigned_cluster})")
 
     print("\n[5/5] Probando Endpoint GET /export-evaluated-csv...")
     export_res = export_evaluated_csv()

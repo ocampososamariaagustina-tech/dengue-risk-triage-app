@@ -459,7 +459,7 @@
               <p id="singleLabRec" class="text-slate-700 font-medium">--</p>
             </div>
             <div class="p-3 bg-white/80 rounded-lg border">
-              <span class="font-bold text-slate-700 block mb-1">Perfil Clínico Asociado (K-Modes):</span>
+              <span class="font-bold text-slate-700 block mb-1">Perfil Clínico por Síntomas (K-Modes):</span>
               <p id="singleClusterRec" class="text-slate-600">--</p>
             </div>
           </div>
@@ -482,7 +482,7 @@
           <p class="text-xs text-slate-500 mt-1">Fundamentos del Trabajo Final de Integración (TFI).</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5 space-y-3">
             <span class="text-xs font-bold uppercase tracking-wider text-indigo-700">1. CatBoost (Supervisado)</span>
             <h3 class="text-base font-bold text-slate-900">Predicción Probabilística y Clasificación</h3>
@@ -495,13 +495,24 @@
           </div>
 
           <div class="bg-amber-50/50 border border-amber-200 rounded-xl p-5 space-y-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-amber-700">2. K-Modes (No Supervisado)</span>
-            <h3 class="text-base font-bold text-slate-900">Interpretabilidad de Perfiles Clínicos</h3>
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-700">2. K-Modes (Con Outcome / Hold-Out)</span>
+            <h3 class="text-base font-bold text-slate-900">Interpretabilidad de Perfiles Globales</h3>
             <p class="text-xs text-slate-600 leading-relaxed">
-              No predice dengue: agrupa a los pacientes en <strong>3 fenotipos clínicos estables</strong> para explicar los datos en lenguaje comprensible. Utiliza la variable <em>Outcome</em> dentro del agrupamiento a fin de caracterizar combinaciones completas de síntomas y diagnóstico.
+              Agrupa a los pacientes en <strong>3 fenotipos clínicos estables</strong> para explicar los datos en lenguaje comprensible sobre datasets de validación. Integra la variable <em>Outcome</em> para analizar la correspondencia entre la sintomatología y la confirmación diagnóstica.
             </p>
             <div class="text-xs text-slate-700 bg-white p-3 rounded-lg border border-amber-100">
               <strong>Variables requeridas:</strong> <code class="text-amber-800">Fever, Headache, Myalgia, Rash, Outcome</code>.
+            </div>
+          </div>
+
+          <div class="bg-teal-50/50 border border-teal-200 rounded-xl p-5 space-y-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-teal-700">3. K-Modes (Solo Síntomas / Triage)</span>
+            <h3 class="text-base font-bold text-slate-900">Ubicación Fenotípica Inmediata</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Orientado a consultorio o guardia: <strong>permite, dado un paciente individual, ubicarlo inmediatamente en uno de los clusters clínicos</strong> basándose exclusivamente en sus síntomas presentes, sin requerir la variable de desenlace (<em>Outcome</em>) ni depender de confirmación de laboratorio.
+            </p>
+            <div class="text-xs text-slate-700 bg-white p-3 rounded-lg border border-teal-100">
+              <strong>Variables requeridas:</strong> <code class="text-teal-800">Fever, Headache, Myalgia, Rash</code>.
             </div>
           </div>
         </div>
@@ -569,7 +580,8 @@
         const badge = document.getElementById('statusBadge');
         if (data.status === 'ok') {
           badge.className = 'flex items-center space-x-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
-          badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>CatBoost & K-Modes Listos</span>';
+          const nModels = Object.keys(data.model_registry?.models || {}).length || 3;
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>${nModels} Modelos Listos (CatBoost + K-Modes)</span>`;
         } else {
           badge.className = 'flex items-center space-x-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
           badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Cargando Modelos</span>';

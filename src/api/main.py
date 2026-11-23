@@ -189,18 +189,32 @@ def predict_single_patient(patient: PatientInput):
     threshold = float(getattr(registry.catboost_model, "best_threshold_", 0.5602))
     pred = int(proba >= threshold)
 
-    # Inferencia K-Modes (con el diagnóstico inferido por CatBoost)
-    df_km = pd.DataFrame([{
-        "Fever": patient.Fever,
-        "Headache": patient.Headache,
-        "Myalgia": patient.Myalgia,
-        "Rash": patient.Rash,
-        "Outcome": pred,
-    }])[FEATURES_KM].astype(int).values
+    # Inferencia de perfil clínico con K-Modes (ubicar al paciente según síntomas)
+    if registry.kmodes_sintomas_model is not None:
+        sintomas_cols = getattr(registry, "kmodes_sintomas_columns", ["Fever", "Headache", "Myalgia", "Rash"])
+        df_km = pd.DataFrame([{
+            "Fever": patient.Fever,
+            "Headache": patient.Headache,
+            "Myalgia": patient.Myalgia,
+            "Rash": patient.Rash,
+        }])[sintomas_cols].astype(int).values
 
-    cluster_assigned = int(registry.kmodes_model.predict(df_km)[0])
-    nombres_dict = registry.metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {})
-    cluster_desc = nombres_dict.get(str(cluster_assigned), f"Cluster {cluster_assigned}")
+        cluster_assigned = int(registry.kmodes_sintomas_model.predict(df_km)[0])
+        nombres_dict = registry.metadata.get("models", {}).get("kmodes_sintomas", {}).get("cluster_names", {})
+        cluster_desc = nombres_dict.get(str(cluster_assigned), f"Cluster {cluster_assigned}")
+    else:
+        # Fallback al modelo K-Modes general con Outcome
+        df_km = pd.DataFrame([{
+            "Fever": patient.Fever,
+            "Headache": patient.Headache,
+            "Myalgia": patient.Myalgia,
+            "Rash": patient.Rash,
+            "Outcome": pred,
+        }])[FEATURES_KM].astype(int).values
+
+        cluster_assigned = int(registry.kmodes_model.predict(df_km)[0])
+        nombres_dict = registry.metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {})
+        cluster_desc = nombres_dict.get(str(cluster_assigned), f"Cluster {cluster_assigned}")
 
     # Triage clínico y conducta diagnóstica orientada a guardia
     if pred == 1:
@@ -231,6 +245,7 @@ def predict_single_patient(patient: PatientInput):
         lab_recommendation=lab_rec,
         assigned_cluster=cluster_assigned,
         cluster_profile=cluster_desc,
+        cluster_model_used="K-Modes (Solo Síntomas)" if registry.kmodes_sintomas_model is not None else "K-Modes (General)",
     )
 
 
