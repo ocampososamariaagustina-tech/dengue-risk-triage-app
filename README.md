@@ -1,12 +1,12 @@
-# Dengue Risk Triage & Analytic Evaluation App
+# Dengue Risk Triage App
 
-> **Trabajo Final Integrador (TFI)** — *Maestría en Ciencia y Tecnología de Datos (MCTD)*  
-> **Autora:** María Agustina Ocampo Sosa  
+> **Trabajo Final Integrador (TFI)** — *(MCTD)*  
+> **Autora:** María Agustina Ocampo Sosa - Fernando Enzo Yapura
 > **Tecnologías:** Python 3.12 | FastAPI | CatBoost | K-Modes | Docker | Tailwind CSS | Chart.js  
 
 ---
 
-## 📌 Descripción del Proyecto
+## Descripción del Proyecto
 
 El dengue representa un desafío crítico de salud pública en Argentina y la región, caracterizado por brotes epidémicos que generan una alta demanda en los servicios de guardia y consultorios ambulatorios. En la práctica clínica diaria, el profesional médico se enfrenta a dos desafíos principales:
 1. **En la consulta inicial (guardia/triaje):** El paciente febril acude con sospecha de dengue, pero **aún no se cuenta con los resultados de laboratorio confirmatorios**. El médico necesita estratificar el riesgo en minutos y determinar qué prueba diagnóstica ordenar según el tiempo de evolución de la fiebre.
@@ -16,7 +16,7 @@ Esta aplicación resuelve ambos momentos mediante una **arquitectura híbrida co
 
 ---
 
-## 🔬 Enfoque Metodológico de los Modelos
+##  Enfoque Metodológico de los Modelos
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -58,7 +58,7 @@ Esta aplicación resuelve ambos momentos mediante una **arquitectura híbrida co
 
 ---
 
-## 🚀 Guía de Descarga y Puesta en Funcionamiento
+## Guía de Descarga y Puesta en Funcionamiento
 
 ### Requisitos Previos
 - **Git** instalado en el equipo.
@@ -154,7 +154,7 @@ Salida esperada:
 
 ---
 
-## 🎬 Demostración Paso a Paso para Mostrarle al Profesor (3 Minutos)
+##  Demostración Paso a Paso
 
 Para presentar la aplicación de manera clara y fluida, se recomienda seguir este recorrido demostrativo utilizando los datasets de prueba incluidos en la carpeta `dev/`:
 
@@ -187,7 +187,7 @@ Para presentar la aplicación de manera clara y fluida, se recomienda seguir est
 
 ---
 
-## 📂 Estructura del Repositorio
+##  Estructura del Repositorio
 
 ```text
 dengue-risk-triage-app/
@@ -219,7 +219,7 @@ dengue-risk-triage-app/
 
 ---
 
-## 📡 Endpoints de la API REST
+##  Endpoints de la API REST
 
 | Método | Endpoint | Entrada | Salida / Rol |
 | :--- | :--- | :--- | :--- |
@@ -235,7 +235,7 @@ dengue-risk-triage-app/
 
 ---
 
-## ⚖️ Declaración de Ética y Uso Clínico
+##  Declaración de Ética y Uso Clínico
 
-Este software ha sido desarrollado con fines académicos y de investigación en el marco del **Trabajo Final Integrador de la Maestría en Ciencia y Tecnología de Datos**.  
+Este software ha sido desarrollado con fines académicos y de investigación en el marco del **Trabajo Final Integrador de la materia Metodos Cuantitativos para la Toma de Decisiones**.  
 Constituye una **herramienta orientativa de apoyo a la decisión clínica** y **no reemplaza** el criterio médico profesional, la anamnesis completa ni las pruebas confirmatorias de laboratorio según los protocolos de vigilancia epidemiológica vigentes.
