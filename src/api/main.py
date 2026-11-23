@@ -202,16 +202,24 @@ def predict_single_patient(patient: PatientInput):
     nombres_dict = registry.metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {})
     cluster_desc = nombres_dict.get(str(cluster_assigned), f"Cluster {cluster_assigned}")
 
-    # Enrutamiento según Guía Nacional de Dengue (Argentina)
-    if patient.Fever_Duration <= 3:
-        lab_rec = "Fase temprana (0-3 días): Priorizar método directo (NS1 / qRT-PCR)."
-    elif patient.Fever_Duration <= 6:
-        lab_rec = "Fase intermedia (4-6 días): Combinar método directo (NS1) con método indirecto (IgM)."
+    # Triage clínico y conducta diagnóstica orientada a guardia
+    if pred == 1:
+        priority = "Alta"
+        diag_desc = "Probable Dengue (Positivo según corte)"
+        if patient.Fever_Duration <= 3:
+            lab_rec = "Fase temprana (0-3 d): Indicar método directo (Ag NS1 / RT-PCR)."
+        elif patient.Fever_Duration <= 6:
+            lab_rec = "Fase intermedia (4-6 d): Indicar método combinado (Ag NS1 + IgM)."
+        else:
+            lab_rec = "Fase tardía (7+ d): Indicar método indirecto (Serología IgM)."
+    elif proba >= 0.20:
+        priority = "Intermedia"
+        diag_desc = "Sospecha Moderada / Observación"
+        lab_rec = "No urgente. Hemograma (plaquetas/leucocitos), hidratación y control en 24-48 h."
     else:
-        lab_rec = "Fase tardía (7+ días): Priorizar método indirecto (IgM)."
-
-    priority = "Alta" if (proba >= threshold or proba > 0.7) else ("Intermedia" if proba > 0.4 else "Baja")
-    diag_desc = "Probable Dengue (Positivo según umbral de corte)" if pred == 1 else "Baja sospecha de Dengue"
+        priority = "Baja"
+        diag_desc = "Baja Sospecha de Dengue"
+        lab_rec = "No indicar NS1 ni PCR (bajo VPP). Manejo sintomático ambulatorio, evaluar foco alternativo y pautas de alarma."
 
     return SinglePredictionResponse(
         status="ok",

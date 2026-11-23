@@ -72,11 +72,31 @@ def test_full_pipeline():
     )
     single_res = predict_single_patient(patient)
     assert single_res.status == "ok"
-    print(f" -> Paciente diagnosticado: {single_res.diagnosis_suggested}")
+    assert single_res.prediction == 1
+    assert "Fase temprana" in single_res.lab_recommendation
+    print(f" -> Caso Alta Probabilidad: {single_res.diagnosis_suggested}")
     print(f"    - Probabilidad: {single_res.probability}")
     print(f"    - Prioridad: {single_res.clinical_priority}")
-    print(f"    - Ventana y recomendación: {single_res.lab_recommendation}")
-    print(f"    - Perfil clínico K-Modes: {single_res.cluster_profile}")
+    print(f"    - Conducta / Laboratorio: {single_res.lab_recommendation}")
+
+    # Caso Baja Probabilidad (Triage negativo / Descarte)
+    patient_low = PatientInput(
+        Fever_Duration=1,
+        Age=22.0,
+        Headache=0,
+        Myalgia=0,
+        Rash=0,
+        Fever=0
+    )
+    res_low = predict_single_patient(patient_low)
+    assert res_low.status == "ok"
+    assert res_low.prediction == 0
+    assert res_low.clinical_priority == "Baja"
+    assert "No indicar NS1 ni PCR" in res_low.lab_recommendation
+    print(f" -> Caso Baja Probabilidad: {res_low.diagnosis_suggested}")
+    print(f"    - Probabilidad: {res_low.probability}")
+    print(f"    - Prioridad: {res_low.clinical_priority}")
+    print(f"    - Conducta / Laboratorio: {res_low.lab_recommendation}")
 
     print("\n[5/5] Probando Endpoint GET /export-evaluated-csv...")
     export_res = export_evaluated_csv()
