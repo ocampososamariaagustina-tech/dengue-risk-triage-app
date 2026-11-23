@@ -25,11 +25,18 @@ from sklearn.metrics import (
 
 FEATURES_CB = ["Fever_Duration", "Age", "Headache", "Myalgia", "Rash", "Fever"]
 FEATURES_KM = ["Fever", "Headache", "Myalgia", "Rash", "Outcome"]
+FEATURES_KM_SYMPTOMS = ["Fever", "Headache", "Myalgia", "Rash"]
 
 
-def validate_dataframe(df: pd.DataFrame, model_type: str = "both") -> Tuple[List[str], List[str]]:
+def validate_dataframe(
+    df: pd.DataFrame,
+    model_type: str = "both",
+    require_outcome: bool = True
+) -> Tuple[List[str], List[str]]:
     """
     Valida el DataFrame según las especificaciones.
+    - Si require_outcome=True: requiere Outcome y calcula métricas técnicas/supervisadas (Hold-Out).
+    - Si require_outcome=False: no requiere Outcome, orientado a triaje clínico sobre pacientes nuevos.
     Retorna (errores, advertencias).
     """
     errors = []
@@ -39,45 +46,67 @@ def validate_dataframe(df: pd.DataFrame, model_type: str = "both") -> Tuple[List
     if len(df) == 0:
         errors.append("El archivo CSV está vacío.")
         return errors, warnings
-    if len(df) < 30:
+    if require_outcome and len(df) < 30:
         warnings.append(f"El dataset tiene solo {len(df)} filas (< 30). Las métricas pueden ser estadísticamente inestables.")
 
     # Encabezados requeridos
     cols_presentes = set(df.columns)
-    if model_type in ["catboost", "both"]:
-        cb_missing = [c for c in FEATURES_CB + ["Outcome"] if c not in cols_presentes]
-        if cb_missing:
-            errors.append(f"Faltan columnas requeridas para CatBoost: {cb_missing}")
+    if require_outcome:
+        if model_type in ["catboost", "both"]:
+            cb_missing = [c for c in FEATURES_CB + ["Outcome"] if c not in cols_presentes]
+            if cb_missing:
+                errors.append(f"Faltan columnas requeridas para CatBoost (con Outcome): {cb_missing}")
 
-    if model_type in ["kmodes", "both"]:
-        km_missing = [c for c in FEATURES_KM if c not in cols_presentes]
-        if km_missing:
-            errors.append(f"Faltan columnas requeridas para K-Modes: {km_missing}")
+        if model_type in ["kmodes", "both"]:
+            km_missing = [c for c in FEATURES_KM if c not in cols_presentes]
+            if km_missing:
+                errors.append(f"Faltan columnas requeridas para K-Modes (con Outcome): {km_missing}")
+    else:
+        # Modo clínico (sin outcome)
+        if model_type in ["catboost", "both"]:
+            cb_missing = [c for c in FEATURES_CB if c not in cols_presentes]
+            if cb_missing:
+                errors.append(f"Faltan columnas requeridas para CatBoost: {cb_missing}")
+
+        if model_type in ["kmodes"]:
+            km_missing = [c for c in FEATURES_KM_SYMPTOMS if c not in cols_presentes]
+            if km_missing:
+                errors.append(f"Faltan columnas requeridas para K-Modes (síntomas): {km_missing}")
 
     if errors:
         return errors, warnings
 
     # Normalización opcional de tipos/valores booleanos si vienen en texto
-    # Outcome
-    if df["Outcome"].dtype == object:
-        df["Outcome"] = df["Outcome"].astype(str).str.strip().map({
-            "Negative": 0, "Positive": 1, "0": 0, "1": 1, "False": 0, "True": 1
-        })
-    # Fever
-    if df["Fever"].dtype == object or df["Fever"].dtype == bool:
-        df["Fever"] = df["Fever"].astype(str).str.strip().map({
-            "False": 0, "True": 1, "0": 0, "1": 1
-        })
+    # Outcome (solo si está presente y se requiere o existe)
+    if "Outcome" in df.columns:
+        if df["Outcome"].dtype == object or df["Outcome"].dtype == bool:
+            df["Outcome"] = df["Outcome"].astype(str).str.strip().map({
+                "Negative": 0, "Positive": 1, "0": 0, "1": 1, "False": 0, "True": 1, "no": 0, "si": 1, "sí": 1
+            })
+
+    # Normalización de síntomas binarios
+    for col in FEATURES_KM_SYMPTOMS:
+        if col in df.columns and (df[col].dtype == object or df[col].dtype == bool):
+            df[col] = df[col].astype(str).str.strip().map({
+                "False": 0, "True": 1, "0": 0, "1": 1, "no": 0, "si": 1, "sí": 1, "Negative": 0, "Positive": 1
+            })
 
     # Validar nulos en requeridas
-    req_cols = list(set(FEATURES_CB + FEATURES_KM))
+    if require_outcome:
+        req_cols = list(set(FEATURES_CB + FEATURES_KM))
+    else:
+        req_cols = list(set(FEATURES_CB if model_type in ["catboost", "both"] else FEATURES_KM_SYMPTOMS))
+
     null_counts = df[req_cols].isnull().sum()
     cols_with_null = null_counts[null_counts > 0]
     if not cols_with_null.empty:
         errors.append(f"Valores nulos detectados en columnas obligatorias: {cols_with_null.to_dict()}")
 
     # Validar binarias {0, 1}
-    binary_cols = ["Headache", "Myalgia", "Rash", "Fever", "Outcome"]
+    binary_cols = ["Headache", "Myalgia", "Rash", "Fever"]
+    if require_outcome or ("Outcome" in df.columns and df["Outcome"].notnull().any()):
+        binary_cols.append("Outcome")
+
     for col in binary_cols:
         if col in df.columns:
             invalid_vals = set(df[col].dropna().unique()) - {0, 1}
@@ -85,7 +114,7 @@ def validate_dataframe(df: pd.DataFrame, model_type: str = "both") -> Tuple[List
                 errors.append(f"Columna binaria '{col}' contiene valores fuera de {{0, 1}}: {invalid_vals}")
 
     # Validar numéricas
-    if "Age" in df.columns:
+    if "Age" in df.columns and model_type in ["catboost", "both"]:
         if not pd.api.types.is_numeric_dtype(df["Age"]):
             errors.append("La columna 'Age' debe ser numérica.")
         elif (df["Age"] <= 0).any():
@@ -93,7 +122,7 @@ def validate_dataframe(df: pd.DataFrame, model_type: str = "both") -> Tuple[List
         elif (df["Age"] > 110).any():
             warnings.append("Valores de 'Age' superiores a 110 años detectados.")
 
-    if "Fever_Duration" in df.columns:
+    if "Fever_Duration" in df.columns and model_type in ["catboost", "both"]:
         if not pd.api.types.is_numeric_dtype(df["Fever_Duration"]):
             errors.append("La columna 'Fever_Duration' debe ser numérica.")
         elif (df["Fever_Duration"] < 0).any():
@@ -101,11 +130,11 @@ def validate_dataframe(df: pd.DataFrame, model_type: str = "both") -> Tuple[List
         elif (df["Fever_Duration"] > 30).any():
             warnings.append("Valores de 'Fever_Duration' mayores a 30 días detectados.")
 
-    # Validar diversidad de clases en Outcome
-    if "Outcome" in df.columns and df["Outcome"].nunique() < 2:
+    # Validar diversidad de clases en Outcome si se requiere outcome
+    if require_outcome and "Outcome" in df.columns and df["Outcome"].nunique() < 2:
         warnings.append("El dataset contiene una sola clase en 'Outcome'. Métricas como ROC-AUC y PR-AUC no podrán calcularse.")
 
-    if df.duplicated(subset=FEATURES_CB).sum() > 0:
+    if all(c in df.columns for c in FEATURES_CB) and df.duplicated(subset=FEATURES_CB).sum() > 0:
         warnings.append(f"Se detectaron {df.duplicated(subset=FEATURES_CB).sum()} filas duplicadas en los predictores clínicos.")
 
     return errors, warnings
@@ -385,6 +414,123 @@ def evaluate_kmodes(km: Any, df: pd.DataFrame, metadata: Dict[str, Any]) -> Dict
     }
 
 
+def predict_kmodes_symptoms(
+    km_model: Any,
+    df: pd.DataFrame,
+    metadata: Dict[str, Any]
+) -> Tuple[np.ndarray, List[str]]:
+    """
+    Asigna clusters de K-Modes basándose exclusivamente en los 4 síntomas cardinales
+    (Fever, Headache, Myalgia, Rash) sin requerir Outcome.
+    Calcula la distancia Hamming mínima a los centroides del modelo en el espacio de síntomas.
+    """
+    centroids = np.asarray(km_model.cluster_centroids_).astype(int)
+    # Las primeras 4 columnas corresponden a Fever, Headache, Myalgia, Rash
+    centroids_symp = centroids[:, :4]
+
+    X_symp = df[FEATURES_KM_SYMPTOMS].astype(int).values
+    # Distancia Hamming vectorizada: (N, n_clusters)
+    dists = (X_symp[:, None, :] != centroids_symp[None, :, :]).sum(axis=2)
+    clusters = np.argmin(dists, axis=1)
+
+    km_meta = metadata.get("models", {}).get("kmodes", {})
+    nombres_dict = km_meta.get("cluster_names", {
+        "0": "Perfil sin cuadro clínico / asintomático",
+        "1": "Perfil dengue típico (síntomas cardinales sin exantema)",
+        "2": "Perfil dengue completo (síntomas cardinales con exantema)"
+    })
+
+    nombres = [nombres_dict.get(str(int(c)), f"Cluster {c}") for c in clusters]
+    return clusters, nombres
+
+
+def evaluate_clinical_batch(
+    cb_model: Optional[Any],
+    km_model: Optional[Any],
+    df: pd.DataFrame,
+    metadata: Dict[str, Any],
+    model_type: str = "both"
+) -> Tuple[Dict[str, Any], pd.DataFrame]:
+    """
+    Evaluación por lote orientada al ámbito clínico para NUEVOS CASOS sin necesidad de Outcome.
+    Proporciona estimación de riesgo, triaje y fenotipos clínicos.
+    """
+    n_total = len(df)
+    enriched_df = df.copy()
+    response_payload: Dict[str, Any] = {
+        "status": "ok",
+        "n_filas": n_total,
+        "model_evaluated": model_type,
+    }
+
+    # Inferencia CatBoost
+    if model_type in ["catboost", "both"] and cb_model is not None:
+        X_cb = df[FEATURES_CB]
+        probas = cb_model.predict_proba(X_cb)[:, 1]
+        umbral = float(getattr(cb_model, "best_threshold_", 0.5602))
+        preds = (probas >= umbral).astype(int)
+
+        priorities = []
+        lab_recs = []
+        for p, fd in zip(probas, df["Fever_Duration"].values):
+            prio = "Alta" if (p >= umbral or p > 0.7) else ("Intermedia" if p > 0.4 else "Baja")
+            priorities.append(prio)
+
+            if fd <= 3:
+                lab_recs.append("Fase temprana (0-3 días): Priorizar método directo (NS1 / qRT-PCR).")
+            elif fd <= 6:
+                lab_recs.append("Fase intermedia (4-6 días): Combinar método directo (NS1) con método indirecto (IgM).")
+            else:
+                lab_recs.append("Fase tardía (7+ días): Priorizar método indirecto (IgM).")
+
+        enriched_df["proba_dengue"] = np.round(probas, 4)
+        enriched_df["pred_catboost"] = preds
+        enriched_df["prioridad_clinica"] = priorities
+        enriched_df["recomendacion_laboratorio"] = lab_recs
+
+        prio_counts = pd.Series(priorities).value_counts().to_dict()
+        alta_cnt = int((preds == 1).sum())
+
+        fever_vals = df["Fever_Duration"].values
+        ventanas = {
+            "fase_temprana_ns1_pcr": int((fever_vals <= 3).sum()),
+            "fase_intermedia_ns1_igm": int(((fever_vals > 3) & (fever_vals <= 6)).sum()),
+            "fase_tardia_igm": int((fever_vals > 6).sum())
+        }
+
+        response_payload["catboost_clinical"] = {
+            "umbral_utilizado": round(umbral, 4),
+            "media_probabilidad": round(float(probas.mean()), 4),
+            "casos_sospecha_alta": alta_cnt,
+            "pct_sospecha_alta": round(float(alta_cnt / n_total), 4) if n_total > 0 else 0.0,
+            "distribucion_prioridad": prio_counts,
+            "distribucion_ventanas_diagnosticas": ventanas,
+        }
+
+    # Inferencia K-Modes (sin outcome)
+    if model_type in ["kmodes", "both"] and km_model is not None:
+        clusters, cluster_nombres = predict_kmodes_symptoms(km_model, df, metadata)
+        enriched_df["cluster_kmodes"] = clusters
+        enriched_df["cluster_nombre"] = cluster_nombres
+
+        unique_c, counts_c = np.unique(clusters, return_counts=True)
+        dist_km = {}
+        for c, cnt in zip(unique_c, counts_c):
+            c_str = str(int(c))
+            dist_km[c_str] = {
+                "n": int(cnt),
+                "pct": round(float(cnt / n_total), 4) if n_total > 0 else 0.0,
+                "nombre": metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {}).get(c_str, f"Cluster {c}")
+            }
+
+        response_payload["kmodes_clinical"] = {
+            "distribucion_clusters": dist_km,
+            "nota": "Asignación fenotípica basada en distancia de Hamming sobre síntomas (Fever, Headache, Myalgia, Rash) sin utilizar Outcome."
+        }
+
+    return response_payload, enriched_df
+
+
 def generate_predictions_table(
     cb_model: Any,
     km_model: Any,
@@ -394,21 +540,28 @@ def generate_predictions_table(
     """Genera DataFrame enriquecido con predicciones y clusters para exportación y visualización."""
     out_df = df.copy()
 
-    if cb_model is not None:
+    if cb_model is not None and all(c in df.columns for c in FEATURES_CB):
         X_cb = df[FEATURES_CB]
-        out_df["proba_dengue"] = np.round(cb_model.predict_proba(X_cb)[:, 1], 4)
-        pred_cb = cb_model.predict(X_cb)
-        if hasattr(pred_cb, "ravel"):
-            pred_cb = pred_cb.ravel().astype(int)
-        out_df["pred_catboost"] = pred_cb
+        probas = cb_model.predict_proba(X_cb)[:, 1]
+        out_df["proba_dengue"] = np.round(probas, 4)
+        umbral = float(getattr(cb_model, "best_threshold_", 0.5602))
+        preds = (probas >= umbral).astype(int)
+        out_df["pred_catboost"] = preds
 
     if km_model is not None:
-        X_km = df[FEATURES_KM].astype(int).values
-        clusters = km_model.predict(X_km)
-        if hasattr(clusters, "ravel"):
-            clusters = clusters.ravel().astype(int)
-        out_df["cluster_kmodes"] = clusters
-        nombres_dict = metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {})
-        out_df["cluster_nombre"] = [nombres_dict.get(str(c), f"Cluster {c}") for c in clusters]
+        # Si Outcome está presente, usar modelo completo con Outcome
+        if all(c in df.columns for c in FEATURES_KM):
+            X_km = df[FEATURES_KM].astype(int).values
+            clusters = km_model.predict(X_km)
+            if hasattr(clusters, "ravel"):
+                clusters = clusters.ravel().astype(int)
+            out_df["cluster_kmodes"] = clusters
+            nombres_dict = metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {})
+            out_df["cluster_nombre"] = [nombres_dict.get(str(c), f"Cluster {c}") for c in clusters]
+        # Si no tiene Outcome, predecir sobre los 4 síntomas
+        elif all(c in df.columns for c in FEATURES_KM_SYMPTOMS):
+            clusters, nombres = predict_kmodes_symptoms(km_model, df, metadata)
+            out_df["cluster_kmodes"] = clusters
+            out_df["cluster_nombre"] = nombres
 
     return out_df

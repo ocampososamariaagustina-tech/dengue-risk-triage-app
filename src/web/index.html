@@ -30,8 +30,8 @@
           </svg>
         </div>
         <div>
-          <h1 class="text-xl font-bold text-slate-900 leading-tight">Dengue Risk Triage <span class="text-xs bg-teal-100 text-teal-800 font-semibold px-2 py-0.5 rounded-full ml-1.5">v1.0 Producción</span></h1>
-          <p class="text-xs text-slate-500 font-medium">Evaluación Hold-Out y Apoyo Clínico | CatBoost & K-Modes</p>
+          <h1 class="text-xl font-bold text-slate-900 leading-tight">Dengue Risk Triage <span class="text-xs bg-teal-100 text-teal-800 font-semibold px-2 py-0.5 rounded-full ml-1.5">v1.2 Producción</span></h1>
+          <p class="text-xs text-slate-500 font-medium">Triaje Clínico (Nuevos Casos) y Auditoría de Métricas (Hold-Out) | CatBoost & K-Modes</p>
         </div>
       </div>
 
@@ -40,7 +40,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Modelos en Memoria</span>
         </div>
-        <a href="#docs" onclick="switchTab('tabDocs')" class="text-xs text-slate-600 hover:text-teal-700 font-semibold px-2 py-1">Documentación</a>
+        <a href="#docs" onclick="switchMainTab('tabDocs')" class="text-xs text-slate-600 hover:text-teal-700 font-semibold px-2 py-1">Documentación</a>
       </div>
     </div>
   </header>
@@ -49,15 +49,18 @@
   <div class="bg-slate-100 border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <nav class="flex space-x-6 text-sm font-medium" aria-label="Tabs">
-        <button id="btnTabBatch" onclick="switchTab('tabBatch')" class="py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-          <span>Evaluación por Lote (Hold-Out / CSV)</span>
-        </button>
-        <button id="btnTabSingle" onclick="switchTab('tabSingle')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2">
+        <!-- Pestaña 1: Evaluación Clínica -->
+        <button id="btnTabClinical" onclick="switchMainTab('tabClinical')" class="py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          <span>Triage Individual (Guardia / Consultorio)</span>
+          <span>Evaluación Clínica (Nuevos Casos)</span>
         </button>
-        <button id="btnTabDocs" onclick="switchTab('tabDocs')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2">
+        <!-- Pestaña 2: Métricas de Modelos -->
+        <button id="btnTabMetrics" onclick="switchMainTab('tabMetrics')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          <span>Métricas de Modelos (Con Outcome)</span>
+        </button>
+        <!-- Pestaña 3: Documentación -->
+        <button id="btnTabDocs" onclick="switchMainTab('tabDocs')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           <span>Arquitectura y Guía Clínica</span>
         </button>
@@ -68,88 +71,430 @@
   <!-- Main Content Container -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
 
-    <!-- ========================================== -->
-    <!-- TAB 1: EVALUACIÓN POR LOTE (HOLD-OUT) -->
-    <!-- ========================================== -->
-    <div id="tabBatch" class="fade-in space-y-6">
-      
-      <!-- Upload Card -->
+    <!-- ================================================================ -->
+    <!-- TAB 1: EVALUACIÓN CLÍNICA (ORIENTADO AL MÉDICO / SIN OUTCOME)    -->
+    <!-- ================================================================ -->
+    <div id="tabClinical" class="fade-in space-y-6">
+
+      <!-- Banner explicativo médico -->
+      <div class="bg-gradient-to-r from-teal-50 to-sky-50 border border-teal-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Módulo de Orientación y Estimación Clínica (Casos Nuevos)</h3>
+            <p class="text-xs text-slate-600 mt-0.5">
+              Diseñado para el médico en guardia o consultorio antes de contar con la confirmación de laboratorio. <strong>No requiere la variable Outcome</strong>.
+            </p>
+          </div>
+        </div>
+        <!-- Selector de Sub-modo: Individual vs Lote -->
+        <div class="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-sm shrink-0">
+          <button id="btnSubIndividual" onclick="switchClinicalSubTab('subIndividual')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-teal-600 text-white shadow-sm transition-all">
+            Triage Individual
+          </button>
+          <button id="btnSubBatch" onclick="switchClinicalSubTab('subBatch')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all">
+            Evaluación por Lote (CSV)
+          </button>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------------------------ -->
+      <!-- SUB-MODO A: EVALUACIÓN INDIVIDUAL                            -->
+      <!-- ------------------------------------------------------------ -->
+      <div id="subIndividual" class="fade-in space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">Triage Clínico Individual para Paciente Febril</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Estimación de probabilidad de dengue, nivel de riesgo y fenotipo clínico sindrómico.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <label for="singleModelChoice" class="text-xs font-bold text-slate-600">Modelo a consultar:</label>
+              <select id="singleModelChoice" class="text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-teal-500 focus:border-teal-500">
+                <option value="both" selected>Ambos (CatBoost + K-Modes)</option>
+                <option value="catboost">Solo CatBoost (Riesgo y Triaje)</option>
+                <option value="kmodes">Solo K-Modes (Fenotipo sin Outcome)</option>
+              </select>
+            </div>
+          </div>
+
+          <form id="singleForm" class="mt-6 space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div id="fieldFeverDuration">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Días de Fiebre (Fever_Duration):</label>
+                <input type="number" id="inpFeverDuration" min="0" max="30" value="3" required class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-teal-500 focus:border-teal-500">
+                <span class="text-[10px] text-slate-400">0 a 7 días habitual en consulta inicial.</span>
+              </div>
+
+              <div id="fieldAge">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Edad (Age):</label>
+                <input type="number" id="inpAge" min="1" max="115" value="32" required class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-teal-500 focus:border-teal-500">
+                <span class="text-[10px] text-slate-400">Años cumplidos.</span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Fiebre Registrada (Fever):</label>
+                <select id="inpFever" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
+                  <option value="1" selected>Sí (1)</option>
+                  <option value="0">No (0)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Cefalea / Dolor de cabeza (Headache):</label>
+                <select id="inpHeadache" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
+                  <option value="1" selected>Sí (1)</option>
+                  <option value="0">No (0)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mialgia / Dolor muscular (Myalgia):</label>
+                <select id="inpMyalgia" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
+                  <option value="1" selected>Sí (1)</option>
+                  <option value="0">No (0)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Exantema / Erupción cutánea (Rash):</label>
+                <select id="inpRash" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
+                  <option value="0" selected>No (0)</option>
+                  <option value="1">Sí (1)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center space-x-1.5">
+                <span>Calcular Riesgo y Conducta</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </form>
+
+          <!-- Single Result Card -->
+          <div id="singleResultCard" class="hidden mt-6 p-6 rounded-xl border space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span id="singleModelBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 uppercase">Modelo</span>
+                  <h3 id="singleDiagTitle" class="text-lg font-bold text-slate-900">Resultado</h3>
+                </div>
+                <p id="singleDiagSub" class="text-xs text-slate-500 mt-0.5">Estimación clínica orientativa</p>
+              </div>
+              <div id="singleProbBox" class="flex items-center space-x-2">
+                <span class="text-xs font-semibold text-slate-500">Probabilidad:</span>
+                <span id="singleProbBadge" class="text-base font-black px-3 py-1 rounded-lg">--%</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <!-- Bloque CatBoost -->
+              <div id="singleCbBox" class="p-3.5 bg-white/90 rounded-xl border border-slate-200 space-y-1.5">
+                <span class="font-bold text-slate-800 flex items-center space-x-1.5">
+                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                  <span>Ventana Diagnóstica Sugerida (Guía Nacional):</span>
+                </span>
+                <p id="singleLabRec" class="text-slate-600 leading-relaxed">--</p>
+              </div>
+              <!-- Bloque K-Modes -->
+              <div id="singleKmBox" class="p-3.5 bg-white/90 rounded-xl border border-slate-200 space-y-1.5">
+                <span class="font-bold text-slate-800 flex items-center space-x-1.5">
+                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <span>Fenotipo Clínico Asignado (K-Modes):</span>
+                </span>
+                <p id="singleClusterRec" class="text-slate-900 font-semibold leading-relaxed">--</p>
+                <p id="singleClusterDetail" class="text-[11px] text-slate-500 italic mt-0.5">--</p>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed">
+              <strong>Aviso Clínico:</strong> <span id="singleDisclaimer">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------------------------ -->
+      <!-- SUB-MODO B: EVALUACIÓN POR LOTE (CSV SIN OUTCOME)             -->
+      <!-- ------------------------------------------------------------ -->
+      <div id="subBatch" class="hidden fade-in space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-lg font-bold text-slate-900">Subir Lote de Nuevos Pacientes (Sin Outcome)</h2>
+                <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">Casos Nuevos</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">
+                Cargue una lista de pacientes febriles en espera de laboratorio. No es necesario tener la confirmación de dengue (<code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700">Outcome</code> no es requerido).
+              </p>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="text-xs font-semibold text-slate-600">Modelos a ejecutar:</span>
+              <select id="clinicalBatchModelSelector" class="text-xs font-semibold bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-3 py-2 focus:ring-teal-500 focus:border-teal-500">
+                <option value="both" selected>Ambos (CatBoost + K-Modes)</option>
+                <option value="catboost">Solo CatBoost (Riesgo y Triaje)</option>
+                <option value="kmodes">Solo K-Modes (Fenotipos sin Outcome)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Drag & Drop Zone Clínico -->
+          <div id="clinicalDropzone" class="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-xl p-8 text-center transition-colors cursor-pointer bg-slate-50/50 hover:bg-teal-50/30">
+            <input type="file" id="clinicalFileInput" accept=".csv" class="hidden">
+            <div class="flex flex-col items-center justify-center space-y-3">
+              <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-800">Arrastre su archivo CSV aquí o <span class="text-teal-600 hover:underline">examine en su equipo</span></p>
+                <p class="text-xs text-slate-400 mt-1">Columnas admitidas: <code class="bg-slate-200 px-1 py-0.5 rounded text-slate-700">Age, Fever_Duration, Fever, Headache, Myalgia, Rash</code></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected File Bar & Execute -->
+          <div id="clinicalFileBar" class="hidden mt-4 p-4 rounded-xl bg-teal-50 border border-teal-200 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+              <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <div>
+                <span id="clinicalFileNameDisplay" class="text-sm font-bold text-slate-900">archivo.csv</span>
+                <span id="clinicalFileSizeDisplay" class="text-xs text-slate-500 ml-2">(0 KB)</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="btnCancelClinicalFile" class="text-xs text-slate-600 hover:text-slate-800 font-semibold px-3 py-1.5 rounded-lg hover:bg-white transition-colors">Cambiar archivo</button>
+              <button id="btnRunClinicalBatch" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-all flex items-center space-x-1.5">
+                <span>Procesar Lote y Generar Triaje</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Notification / Warning Box -->
+          <div id="clinicalWarningBox" class="hidden mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+            <div class="font-bold mb-1 flex items-center space-x-1">
+              <svg class="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              <span>Observaciones de Validación:</span>
+            </div>
+            <ul id="clinicalWarningList" class="list-disc list-inside space-y-0.5"></ul>
+          </div>
+
+          <!-- Error Box -->
+          <div id="clinicalErrorBox" class="hidden mt-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+            <div class="font-bold mb-1 flex items-center space-x-1">
+              <svg class="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+              <span>Error al procesar el lote:</span>
+            </div>
+            <ul id="clinicalErrorList" class="list-disc list-inside space-y-0.5"></ul>
+          </div>
+        </div>
+
+        <!-- Spinner Clínico -->
+        <div id="clinicalLoadingOverlay" class="hidden bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-sm flex flex-col items-center justify-center space-y-3">
+          <div class="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
+          <p class="text-sm font-bold text-slate-800">Procesando triaje de nuevos casos...</p>
+          <p class="text-xs text-slate-500">Calculando probabilidades, categorizando prioridades clínicas y asignando fenotipos sindrómicos.</p>
+        </div>
+
+        <!-- Resultados Clínicos Lote -->
+        <div id="clinicalResultsContainer" class="hidden space-y-6">
+
+          <!-- Resumen Estadístico Clínico -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+              <div>
+                <h3 class="text-lg font-bold text-slate-900">Resumen del Triaje Clínico por Lote</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Resultados orientativos generados sobre pacientes sin diagnóstico confirmado aún.</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-slate-500">Total pacientes:</span>
+                <span id="clinTotalPatients" class="text-sm font-bold bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded-lg border">0</span>
+              </div>
+            </div>
+
+            <!-- CatBoost Clinical KPIs Grid -->
+            <div id="clinCbSection" class="space-y-4">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-teal-800 flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+                <span>CatBoost: Prioridad de Triaje y Conducta Diagnóstica</span>
+              </h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
+                  <span class="text-xs font-bold text-rose-800 block">Alta Prioridad / Sospecha Dengue</span>
+                  <span id="clinHighPriorityCount" class="text-2xl font-black text-rose-900 block my-1">0</span>
+                  <span id="clinHighPriorityPct" class="text-xs font-semibold text-rose-700">0% del lote</span>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <span class="text-xs font-bold text-amber-800 block">Prioridad Intermedia</span>
+                  <span id="clinIntermPriorityCount" class="text-2xl font-black text-amber-900 block my-1">0</span>
+                  <span class="text-xs text-amber-700">Monitoreo y pautas de alarma</span>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <span class="text-xs font-bold text-slate-700 block">Baja Sospecha</span>
+                  <span id="clinLowPriorityCount" class="text-2xl font-black text-slate-900 block my-1">0</span>
+                  <span class="text-xs text-slate-500">Probabilidad &lt; 0.40</span>
+                </div>
+                <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
+                  <span class="text-xs font-bold text-teal-800 block">Probabilidad Media Estimada</span>
+                  <span id="clinMeanProba" class="text-2xl font-black text-teal-900 block my-1">--%</span>
+                  <span class="text-xs text-teal-700">Umbral de corte: 0.5602</span>
+                </div>
+              </div>
+
+              <!-- Desglose de Ventanas Diagnósticas -->
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span class="text-xs font-bold text-slate-800 block mb-2">Distribución por Ventana Diagnóstica según Días de Fiebre:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="font-bold text-teal-700 block">Fase Temprana (0-3 días)</span>
+                    <span id="clinVentanaEarly" class="text-lg font-black text-slate-900">0 pac.</span>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Priorizar método directo (NS1 / qRT-PCR).</p>
+                  </div>
+                  <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="font-bold text-sky-700 block">Fase Intermedia (4-6 días)</span>
+                    <span id="clinVentanaMid" class="text-lg font-black text-slate-900">0 pac.</span>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Combinar método directo (NS1) con indirecto (IgM).</p>
+                  </div>
+                  <div class="bg-white p-3 rounded-lg border border-slate-200">
+                    <span class="font-bold text-indigo-700 block">Fase Tardía (7+ días)</span>
+                    <span id="clinVentanaLate" class="text-lg font-black text-slate-900">0 pac.</span>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Priorizar método indirecto (IgM).</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- K-Modes Clinical Section -->
+            <div id="clinKmSection" class="space-y-4 pt-4 border-t border-slate-100">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-800 flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                <span>K-Modes: Distribución Fenotípica de Pacientes en el Lote (Sin Outcome)</span>
+              </h4>
+              <div id="clinKmGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Se inyecta dinámicamente -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de Resultados Clínicos y Descarga -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Vista Previa de Triaje Clínico por Paciente</h3>
+                <p class="text-xs text-slate-500">Muestra de las primeras filas procesadas con las recomendaciones clínicas.</p>
+              </div>
+              <a href="/clinical/export-csv" id="btnExportClinicalCsv" class="inline-flex items-center space-x-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Descargar CSV con Triaje Clínico</span>
+              </a>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-xs text-left">
+                <thead id="clinicalPreviewHead" class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200"></thead>
+                <tbody id="clinicalPreviewBody" class="divide-y divide-slate-100 font-mono text-[11px]"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ================================================================ -->
+    <!-- TAB 2: MÉTRICAS DE MODELOS (CON OUTCOME / HOLD-OUT / AUDITORÍA)  -->
+    <!-- ================================================================ -->
+    <div id="tabMetrics" class="hidden fade-in space-y-6">
+
+      <!-- Upload Card Métricas -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
           <div>
-            <h2 class="text-lg font-bold text-slate-900">Subir Dataset de Evaluación (Hold-Out)</h2>
-            <p class="text-sm text-slate-500">Cargue un archivo CSV para validar el rendimiento supervisado de CatBoost y la coherencia de perfiles clínicos con K-Modes.</p>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-lg font-bold text-slate-900">Auditoría Técnica y Evaluación de Métricas</h2>
+              <span class="text-xs bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full">Requiere Outcome</span>
+            </div>
+            <p class="text-sm text-slate-500 mt-1">
+              Cargue un archivo CSV que contenga la columna <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-800 font-bold">Outcome</code> (casos confirmados por laboratorio o dataset Hold-Out) para calcular F1, matriz de confusión, curvas ROC/PR, estabilidad PSI y pureza de clusters.
+            </p>
           </div>
           <div class="flex items-center space-x-3">
-            <span class="text-xs font-semibold text-slate-600">Modelos a ejecutar:</span>
-            <select id="modelSelector" class="text-xs font-semibold bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-3 py-2 focus:ring-teal-500 focus:border-teal-500">
-              <option value="both" selected>Ambos (CatBoost + K-Modes)</option>
+            <span class="text-xs font-semibold text-slate-600">Modelos a auditar:</span>
+            <select id="metricsModelSelector" class="text-xs font-semibold bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="both" selected>Ambos (CatBoost + K-Modes con Outcome)</option>
               <option value="catboost">Solo CatBoost (Supervisado)</option>
-              <option value="kmodes">Solo K-Modes (Perfiles Clínicos)</option>
+              <option value="kmodes">Solo K-Modes (Con Outcome)</option>
             </select>
           </div>
         </div>
 
-        <!-- Drag & Drop Zone -->
-        <div id="dropzone" class="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-xl p-8 text-center transition-colors cursor-pointer bg-slate-50/50 hover:bg-teal-50/30">
-          <input type="file" id="fileInput" accept=".csv" class="hidden">
+        <!-- Drag & Drop Zone Métricas -->
+        <div id="metricsDropzone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-8 text-center transition-colors cursor-pointer bg-slate-50/50 hover:bg-indigo-50/30">
+          <input type="file" id="metricsFileInput" accept=".csv" class="hidden">
           <div class="flex flex-col items-center justify-center space-y-3">
-            <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             </div>
             <div>
-              <p class="text-sm font-semibold text-slate-800">Arrastre su archivo CSV aquí o <span class="text-teal-600 hover:underline">examine en su equipo</span></p>
-              <p class="text-xs text-slate-400 mt-1">Formato admitido: CSV codificado en UTF-8 o Latin-1 (ej. <code class="bg-slate-200 px-1 py-0.5 rounded text-slate-700">validacion_produccion.csv</code>)</p>
+              <p class="text-sm font-semibold text-slate-800">Arrastre su dataset con Outcome aquí o <span class="text-indigo-600 hover:underline">examine en su equipo</span></p>
+              <p class="text-xs text-slate-400 mt-1">Formato: CSV codificado en UTF-8 o Latin-1 (ej. <code class="bg-slate-200 px-1 py-0.5 rounded text-slate-700">sample_holdout.csv</code> con columna Outcome)</p>
             </div>
           </div>
         </div>
 
         <!-- Selected File Bar & Execute -->
-        <div id="fileSelectedBar" class="hidden mt-4 p-4 rounded-xl bg-teal-50 border border-teal-200 flex flex-wrap items-center justify-between gap-3">
+        <div id="metricsFileBar" class="hidden mt-4 p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             <div>
-              <span id="fileNameDisplay" class="text-sm font-bold text-slate-900">archivo.csv</span>
-              <span id="fileSizeDisplay" class="text-xs text-slate-500 ml-2">(0 KB)</span>
+              <span id="metricsFileNameDisplay" class="text-sm font-bold text-slate-900">archivo.csv</span>
+              <span id="metricsFileSizeDisplay" class="text-xs text-slate-500 ml-2">(0 KB)</span>
             </div>
           </div>
           <div class="flex items-center space-x-2">
-            <button id="btnCancelFile" class="text-xs text-slate-600 hover:text-slate-800 font-semibold px-3 py-1.5 rounded-lg hover:bg-white transition-colors">Cambiar archivo</button>
-            <button id="btnRunEvaluation" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-all flex items-center space-x-1.5">
-              <span>Procesar y Evaluar Métricas</span>
+            <button id="btnCancelMetricsFile" class="text-xs text-slate-600 hover:text-slate-800 font-semibold px-3 py-1.5 rounded-lg hover:bg-white transition-colors">Cambiar archivo</button>
+            <button id="btnRunMetrics" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-all flex items-center space-x-1.5">
+              <span>Procesar y Auditar Métricas</span>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </button>
           </div>
         </div>
 
-        <!-- Notification / Warning Box -->
-        <div id="warningBox" class="hidden mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+        <!-- Warning Box Métricas -->
+        <div id="metricsWarningBox" class="hidden mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
           <div class="font-bold mb-1 flex items-center space-x-1">
             <svg class="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
             <span>Observaciones de Validación:</span>
           </div>
-          <ul id="warningList" class="list-disc list-inside space-y-0.5"></ul>
+          <ul id="metricsWarningList" class="list-disc list-inside space-y-0.5"></ul>
         </div>
 
-        <!-- Error Box -->
-        <div id="errorBox" class="hidden mt-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+        <!-- Error Box Métricas -->
+        <div id="metricsErrorBox" class="hidden mt-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
           <div class="font-bold mb-1 flex items-center space-x-1">
             <svg class="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
             <span>Error en los datos cargados:</span>
           </div>
-          <ul id="errorList" class="list-disc list-inside space-y-0.5"></ul>
+          <ul id="metricsErrorList" class="list-disc list-inside space-y-0.5"></ul>
         </div>
       </div>
 
-      <!-- Loading Spinner -->
-      <div id="loadingOverlay" class="hidden bg-white/90 rounded-2xl p-12 text-center border border-slate-200 shadow-sm flex flex-col items-center justify-center space-y-3">
-        <div class="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
-        <p class="text-sm font-bold text-slate-800">Ejecutando inferencia y cálculos estadísticos...</p>
-        <p class="text-xs text-slate-500">Calculando Bootstrap 1000x, curvas ROC/PR y métricas de Silhouette Hamming.</p>
+      <!-- Spinner Métricas -->
+      <div id="metricsLoadingOverlay" class="hidden bg-white/90 rounded-2xl p-12 text-center border border-slate-200 shadow-sm flex flex-col items-center justify-center space-y-3">
+        <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p class="text-sm font-bold text-slate-800">Calculando métricas estadísticas sobre Hold-Out...</p>
+        <p class="text-xs text-slate-500">Generando Bootstrap 1000x, curvas ROC/PR, matriz de confusión y métricas de Silhouette Hamming.</p>
       </div>
 
-      <!-- RESULTS CONTAINER (Hidden until evaluation) -->
-      <div id="resultsContainer" class="hidden space-y-6">
+      <!-- RESULTS CONTAINER MÉTRICAS -->
+      <div id="metricsResultsContainer" class="hidden space-y-6">
 
         <!-- ================= CATBOOST SECTION ================= -->
         <div id="catboostSection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
@@ -159,7 +504,7 @@
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">Modelo Supervisado</span>
                 <h3 class="text-lg font-bold text-slate-900">CatBoost Classifier (Umbral Tuneado)</h3>
               </div>
-              <p class="text-xs text-slate-500 mt-0.5">Predicción probabilística y clasificación binaria de Dengue (Clase Positiva = 1).</p>
+              <p class="text-xs text-slate-500 mt-0.5">Rendimiento diagnóstico sobre Hold-Out con diagnóstico confirmado (Outcome = 1 dengue).</p>
             </div>
             <div class="text-right">
               <span class="text-xs text-slate-500">Umbral Óptimo de Corte:</span>
@@ -169,37 +514,31 @@
 
           <!-- KPI Cards Grid -->
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <!-- F1 -->
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
               <span class="text-xs font-semibold text-slate-500 block">F1-Score</span>
               <span id="cbF1" class="text-2xl font-black text-slate-900 block my-0.5">--</span>
               <span id="cbDeltaF1" class="text-[10px] font-semibold text-slate-500">Ref: 0.9248</span>
             </div>
-            <!-- Recall / Sensibilidad -->
             <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-center">
               <span class="text-xs font-semibold text-rose-700 block">Sensibilidad (Recall)</span>
               <span id="cbRecall" class="text-2xl font-black text-rose-900 block my-0.5">--</span>
               <span id="cbDeltaRecall" class="text-[10px] font-semibold text-rose-600">Ref: 0.9425</span>
             </div>
-            <!-- ROC AUC -->
             <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 text-center">
               <span class="text-xs font-semibold text-indigo-700 block">ROC-AUC</span>
               <span id="cbRocAuc" class="text-2xl font-black text-indigo-900 block my-0.5">--</span>
               <span id="cbDeltaRoc" class="text-[10px] font-semibold text-indigo-600">Ref: 0.9510</span>
             </div>
-            <!-- Accuracy -->
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
               <span class="text-xs font-semibold text-slate-500 block">Accuracy</span>
               <span id="cbAccuracy" class="text-2xl font-black text-slate-900 block my-0.5">--</span>
               <span id="cbErrorRate" class="text-[10px] font-semibold text-slate-500">Error: --</span>
             </div>
-            <!-- Precision -->
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
               <span class="text-xs font-semibold text-slate-500 block">Precisión (VPP)</span>
               <span id="cbPrecision" class="text-2xl font-black text-slate-900 block my-0.5">--</span>
               <span id="cbDeltaPrec" class="text-[10px] font-semibold text-slate-500">Ref: 0.9077</span>
             </div>
-            <!-- F2-Score -->
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
               <span class="text-xs font-semibold text-slate-500 block">F2-Score</span>
               <span id="cbF2" class="text-2xl font-black text-slate-900 block my-0.5">--</span>
@@ -217,12 +556,12 @@
                 <div class="bg-emerald-100/70 border border-emerald-200 rounded-lg p-3">
                   <span class="text-[10px] font-semibold text-emerald-800 uppercase block">Verdaderos Negativos (TN)</span>
                   <span id="cmTN" class="text-xl font-black text-emerald-900">0</span>
-                  <span class="text-[10px] text-emerald-700 block">No Dengue detectado</span>
+                  <span class="text-[10px] text-emerald-700 block">No Dengue confirmado</span>
                 </div>
                 <div class="bg-amber-100/70 border border-amber-200 rounded-lg p-3">
                   <span class="text-[10px] font-semibold text-amber-800 uppercase block">Falsos Positivos (FP)</span>
                   <span id="cmFP" class="text-xl font-black text-amber-900">0</span>
-                  <span class="text-[10px] text-amber-700 block">Alarma innecesaria</span>
+                  <span class="text-[10px] text-amber-700 block">Falsa alarma</span>
                 </div>
                 <div class="bg-rose-100/70 border border-rose-200 rounded-lg p-3">
                   <span class="text-[10px] font-semibold text-rose-800 uppercase block">Falsos Negativos (FN)</span>
@@ -232,11 +571,10 @@
                 <div class="bg-teal-100/70 border border-teal-200 rounded-lg p-3">
                   <span class="text-[10px] font-semibold text-teal-800 uppercase block">Verdaderos Positivos (TP)</span>
                   <span id="cmTP" class="text-xl font-black text-teal-900">0</span>
-                  <span class="text-[10px] text-teal-700 block">Dengue confirmado</span>
+                  <span class="text-[10px] text-teal-700 block">Dengue detectado</span>
                 </div>
               </div>
 
-              <!-- Metric summary badges -->
               <div class="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-200">
                 <div><span class="text-slate-500">Especificidad:</span> <span id="cbSpec" class="font-bold">--</span></div>
                 <div><span class="text-slate-500">VPN:</span> <span id="cbNPV" class="font-bold">--</span></div>
@@ -247,45 +585,39 @@
 
             <!-- Charts (8 cols) -->
             <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- ROC Curve -->
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Curva ROC</h4>
-                <div class="h-48">
-                  <canvas id="rocChart"></canvas>
-                </div>
+              <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Curva ROC (Sensibilidad vs 1-Esp)</span>
+                <div class="relative h-48 w-full"><canvas id="rocChart"></canvas></div>
               </div>
-              <!-- Precision-Recall Curve -->
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Curva Precision-Recall</h4>
-                <div class="h-48">
-                  <canvas id="prChart"></canvas>
-                </div>
+              <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">Curva Precisión - Recall (PR)</span>
+                <div class="relative h-48 w-full"><canvas id="prChart"></canvas></div>
               </div>
             </div>
           </div>
 
           <!-- Bootstrap 95% CI Table -->
-          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Intervalos de Confianza al 95% (Bootstrap 1000 Remuestreos)</h4>
-            <div class="overflow-x-auto">
-              <table class="min-w-full text-xs text-left text-slate-700">
-                <thead class="bg-slate-200 text-slate-800 font-bold">
+          <div class="border-t border-slate-100 pt-4 space-y-3">
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Intervalos de Confianza 95% (Bootstrap B=1000)</h4>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                   <tr>
                     <th class="p-2">Métrica</th>
                     <th class="p-2 text-center">Límite Inferior (2.5%)</th>
                     <th class="p-2 text-center">Límite Superior (97.5%)</th>
-                    <th class="p-2 text-center">Interpretación Clínica</th>
+                    <th class="p-2">Interpretación Clínica</th>
                   </tr>
                 </thead>
-                <tbody id="ciTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                <tbody id="ciTableBody" class="divide-y divide-slate-100"></tbody>
               </table>
             </div>
           </div>
 
-          <!-- Subgroup Analysis (if any) -->
-          <div id="subgroupContainer" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Análisis por Subgrupos (Género y Fuente de Datos)</h4>
-            <div id="subgroupTables" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+          <!-- Subgroups Container -->
+          <div id="subgroupContainer" class="hidden border-t border-slate-100 pt-4 space-y-3">
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Desglose por Subgrupos Clínicos y Demográficos</h4>
+            <div id="subgroupTables" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
         </div>
 
@@ -294,81 +626,67 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
             <div>
               <div class="flex items-center space-x-2">
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Modelo No Supervisado / Interpretabilidad</span>
-                <h3 class="text-lg font-bold text-slate-900">K-Modes Clustering (Perfiles Clínicos)</h3>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Modelo No Supervisado</span>
+                <h3 class="text-lg font-bold text-slate-900">K-Modes Clustering (Perfiles con Outcome)</h3>
               </div>
-              <p class="text-xs text-slate-500 mt-0.5">Agrupamiento descriptivo para explicar fenotipos de pacientes basados en síntomas + diagnóstico.</p>
+              <p class="text-xs text-slate-500 mt-0.5">Estabilidad poblacional (PSI), pureza con outcome y caracterización fenotípica.</p>
             </div>
-            <div class="flex items-center space-x-2">
-              <span class="text-xs text-slate-500">Estabilidad Poblacional:</span>
-              <span id="kmPsiBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">PSI: --</span>
+            <div id="kmPsiBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+              PSI: --
             </div>
           </div>
 
-          <!-- 3 Clusters Profile Cards -->
+          <!-- K-Modes Metrics Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <span class="text-xs font-semibold text-slate-500 block">Distancia Hamming al Centroide</span>
+              <div class="flex items-baseline space-x-2 my-1">
+                <span id="kmCostHold" class="text-2xl font-black text-slate-900">--</span>
+                <span class="text-xs text-slate-400">/obs</span>
+              </div>
+              <span id="kmCostDelta" class="text-[11px] text-slate-500 font-medium">Ref Train: <span id="kmCostTrain">--</span></span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <span class="text-xs font-semibold text-slate-500 block">Silhouette Score Global (Hamming)</span>
+              <span id="kmSilGlobal" class="text-2xl font-black text-slate-900 block my-1">--</span>
+              <span class="text-[11px] text-slate-500">Separabilidad de clusters</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <span class="text-xs font-semibold text-slate-500 block">Coincidencia con Outcome</span>
+              <span id="kmPurity" class="text-lg font-bold text-slate-800 block my-1">Pureza: --</span>
+              <span class="text-[11px] text-slate-400">Outcome utilizado en la caracterización</span>
+            </div>
+          </div>
+
+          <!-- Clusters Cards Grid -->
           <div id="clusterCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
 
-          <!-- Symptoms Prevalence by Cluster (Bar Chart) & Stability Metrics -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div class="lg:col-span-8 bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Prevalencia de Manifestaciones por Perfil Clínico</h4>
-              <div class="h-64">
-                <canvas id="kmodesBarChart"></canvas>
-              </div>
-            </div>
-
-            <!-- Stability & Silhouette Metrics -->
-            <div class="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
-              <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Métricas de Agrupamiento y Ajuste</h4>
-              
-              <div class="space-y-3 text-xs">
-                <div class="p-3 bg-white border border-slate-200 rounded-lg">
-                  <div class="flex justify-between font-bold text-slate-800">
-                    <span>Distancia Hamming al Centroide:</span>
-                    <span id="kmCostHold">--</span>
-                  </div>
-                  <p class="text-[10px] text-slate-500 mt-0.5">Entrenamiento: <span id="kmCostTrain">0.629</span> (<span id="kmCostDelta">delta: --</span>)</p>
-                </div>
-
-                <div class="p-3 bg-white border border-slate-200 rounded-lg">
-                  <div class="flex justify-between font-bold text-slate-800">
-                    <span>Silhouette Score (Hamming):</span>
-                    <span id="kmSilGlobal">--</span>
-                  </div>
-                  <p class="text-[10px] text-slate-500 mt-0.5">> 0.5 indica separación consistente de fenotipos.</p>
-                </div>
-
-                <div class="p-3 bg-white border border-slate-200 rounded-lg">
-                  <div class="flex justify-between font-bold text-slate-800">
-                    <span>Pureza / NMI vs. Outcome:</span>
-                    <span id="kmPurity">--</span>
-                  </div>
-                  <p class="text-[10px] text-slate-400 mt-0.5 italic">Nota: Outcome es feature del clustering por diseño para describir perfiles completos.</p>
-                </div>
-              </div>
+          <!-- Prevalence Bar Chart -->
+          <div class="border-t border-slate-100 pt-4 space-y-3">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Frecuencia de Síntomas y Diagnóstico por Cluster</span>
+            <div class="relative h-64 w-full bg-white border border-slate-200 rounded-xl p-4">
+              <canvas id="kmodesBarChart"></canvas>
             </div>
           </div>
         </div>
 
-        <!-- ================= EXPORT & PREVIEW SECTION ================= -->
+        <!-- Preview Table & Export Metrics -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 class="text-base font-bold text-slate-900">Vista Previa de Resultados por Paciente</h3>
-              <p class="text-xs text-slate-500">Muestra de las primeras 25 filas procesadas con sus predicciones y perfiles asignados.</p>
+              <h3 class="text-base font-bold text-slate-900">Vista Previa del Dataset Evaluado</h3>
+              <p class="text-xs text-slate-500">Muestra de las primeras 25 filas enriquecidas con predicciones y clusters.</p>
             </div>
-            <a href="/export-evaluated-csv" class="inline-flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              <span>Descargar CSV Completo Enriquecido</span>
+            <a href="/metrics/export-csv" id="btnExportMetricsCsv" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Descargar CSV de Métricas</span>
             </a>
           </div>
 
-          <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="min-w-full text-xs text-left text-slate-700">
-              <thead class="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
-                <tr id="previewTableHead"></tr>
-              </thead>
-              <tbody id="previewTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-xs text-left">
+              <thead id="previewTableHead" class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200"></thead>
+              <tbody id="previewTableBody" class="divide-y divide-slate-100 font-mono text-[11px]"></tbody>
             </table>
           </div>
         </div>
@@ -377,149 +695,70 @@
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- TAB 2: TRIAGE INDIVIDUAL (PACIENTE) -->
-    <!-- ========================================== -->
-    <div id="tabSingle" class="hidden fade-in space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 class="text-lg font-bold text-slate-900">Triage Clínico Individual para Paciente Febril</h2>
-        <p class="text-xs text-slate-500 mt-1">Estimación inmediata del riesgo de dengue y orientación sobre ventana diagnóstica recomendada.</p>
-
-        <form id="singleForm" class="mt-6 space-y-6">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Días de Fiebre (Fever_Duration):</label>
-              <input type="number" id="inpFeverDuration" min="0" max="30" value="3" required class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-teal-500 focus:border-teal-500">
-              <span class="text-[10px] text-slate-400">0 a 7 días habitual en consulta inicial.</span>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Edad (Age):</label>
-              <input type="number" id="inpAge" min="1" max="115" value="32" required class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-teal-500 focus:border-teal-500">
-              <span class="text-[10px] text-slate-400">Años cumplidos.</span>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Fiebre Registrada (Fever):</label>
-              <select id="inpFever" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
-                <option value="1" selected>Sí (1)</option>
-                <option value="0">No (0)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Cefalea / Dolor de cabeza (Headache):</label>
-              <select id="inpHeadache" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
-                <option value="1" selected>Sí (1)</option>
-                <option value="0">No (0)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Mialgia / Dolor muscular (Myalgia):</label>
-              <select id="inpMyalgia" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
-                <option value="1" selected>Sí (1)</option>
-                <option value="0">No (0)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Exantema / Erupción (Rash):</label>
-              <select id="inpRash" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5">
-                <option value="0" selected>No (0)</option>
-                <option value="1">Sí (1)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="flex justify-end pt-2">
-            <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center space-x-1.5">
-              <span>Calcular Riesgo y Conducta</span>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            </button>
-          </div>
-        </form>
-
-        <!-- Single Result Card -->
-        <div id="singleResultCard" class="hidden mt-6 p-6 rounded-xl border space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
-            <div>
-              <h3 id="singleDiagTitle" class="text-lg font-bold text-slate-900">Resultado</h3>
-              <p id="singleDiagSub" class="text-xs text-slate-500">Estimación generada por CatBoost</p>
-            </div>
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-semibold text-slate-500">Probabilidad:</span>
-              <span id="singleProbBadge" class="text-base font-black px-3 py-1 rounded-lg">--%</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div class="p-3 bg-white/80 rounded-lg border">
-              <span class="font-bold text-slate-700 block mb-1">Ventana Diagnóstica Sugerida (Guía Nacional):</span>
-              <p id="singleLabRec" class="text-slate-600">--</p>
-            </div>
-            <div class="p-3 bg-white/80 rounded-lg border">
-              <span class="font-bold text-slate-700 block mb-1">Perfil Clínico Asociado (K-Modes):</span>
-              <p id="singleClusterRec" class="text-slate-600">--</p>
-            </div>
-          </div>
-
-          <div class="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <strong>Aviso Legal y Clínico:</strong> <span id="singleDisclaimer">--</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- ========================================== -->
-    <!-- TAB 3: DOCUMENTACIÓN Y GUÍA CLÍNICA -->
-    <!-- ========================================== -->
+    <!-- ================================================================ -->
+    <!-- TAB 3: DOCUMENTACIÓN Y GUÍA CLÍNICA                             -->
+    <!-- ================================================================ -->
     <div id="tabDocs" class="hidden fade-in space-y-6">
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
         <div>
-          <h2 class="text-xl font-bold text-slate-900">Especificaciones y Roles de los Modelos</h2>
-          <p class="text-xs text-slate-500 mt-1">Fundamentos del Trabajo Final de Integración (TFI).</p>
+          <h2 class="text-xl font-bold text-slate-900">Guía Clínica y Arquitectura del Sistema</h2>
+          <p class="text-xs text-slate-500 mt-1">Diferenciación de flujos de trabajo según la disponibilidad del resultado de laboratorio (Outcome).</p>
         </div>
 
+        <!-- Comparativa de Flujos -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5 space-y-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-indigo-700">1. CatBoost (Supervisado)</span>
-            <h3 class="text-base font-bold text-slate-900">Predicción Probabilística y Clasificación</h3>
-            <p class="text-xs text-slate-600 leading-relaxed">
-              Entrenado y tuneado mediante <strong>GridSearchCV + TunedThresholdClassifierCV</strong> con 6 variables clínicas. Su umbral óptimo (<code class="bg-indigo-100 px-1 py-0.5 rounded text-indigo-900 font-bold">0.5602</code>) fue optimizado en validación cruzada para maximizar el F1-Score y balancear la sensibilidad clínica (evitando falsos negativos en dengue).
-            </p>
-            <div class="text-xs text-slate-700 bg-white p-3 rounded-lg border border-indigo-100">
-              <strong>Variables requeridas:</strong> <code class="text-indigo-800">Fever_Duration, Age, Headache, Myalgia, Rash, Fever</code>.
+          <div class="bg-teal-50/60 border border-teal-200 rounded-xl p-5 space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-teal-600"></span>
+              <h3 class="text-sm font-bold text-slate-900">1. Fase Clínica (Nuevos Casos / Sin Outcome)</h3>
             </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Ocurre en la consulta médica inicial o guardia cuando el paciente acude con síndrome febril agudo. En este punto <strong>aún no se dispone de resultado de laboratorio confirmatorio</strong>.
+            </p>
+            <ul class="text-xs text-slate-700 space-y-1.5 list-disc list-inside">
+              <li><strong>CatBoost:</strong> Estima la probabilidad de dengue según los predictores clínicos (<code class="text-teal-800">Fever_Duration, Age, Fever, Headache, Myalgia, Rash</code>) y categoriza el riesgo.</li>
+              <li><strong>Ventana diagnóstica:</strong> Orienta la solicitud de pruebas según la Guía Nacional de Dengue (Argentina):
+                <div class="ml-4 mt-1 space-y-0.5 text-[11px] text-slate-600">
+                  <div>• 0 a 3 días: Método directo (Antígeno NS1 / qRT-PCR).</div>
+                  <div>• 4 a 6 días: Método directo + indirecto (NS1 + IgM).</div>
+                  <div>• 7 o más días: Método indirecto (Serología IgM).</div>
+                </div>
+              </li>
+              <li><strong>K-Modes (sin outcome):</strong> Clasifica al paciente en uno de los 3 fenotipos clínicos basándose en la distancia Hamming sobre sus síntomas.</li>
+            </ul>
           </div>
 
-          <div class="bg-amber-50/50 border border-amber-200 rounded-xl p-5 space-y-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-amber-700">2. K-Modes (No Supervisado)</span>
-            <h3 class="text-base font-bold text-slate-900">Interpretabilidad de Perfiles Clínicos</h3>
-            <p class="text-xs text-slate-600 leading-relaxed">
-              No predice dengue: agrupa a los pacientes en <strong>3 fenotipos clínicos estables</strong> para explicar los datos en lenguaje comprensible. Utiliza la variable <em>Outcome</em> dentro del agrupamiento a fin de caracterizar combinaciones completas de síntomas y diagnóstico.
-            </p>
-            <div class="text-xs text-slate-700 bg-white p-3 rounded-lg border border-amber-100">
-              <strong>Variables requeridas:</strong> <code class="text-amber-800">Fever, Headache, Myalgia, Rash, Outcome</code>.
+          <div class="bg-indigo-50/60 border border-indigo-200 rounded-xl p-5 space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-indigo-600"></span>
+              <h3 class="text-sm font-bold text-slate-900">2. Fase de Auditoría y Métricas (Con Outcome)</h3>
             </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Ocurre de forma retrospectiva cuando los resultados de laboratorio confirman o descartan dengue (<code class="text-indigo-800 font-bold">Outcome = 1 ó 0</code>). Se utiliza para auditar la precisión de los modelos y detectar deriva de datos (data drift).
+            </p>
+            <ul class="text-xs text-slate-700 space-y-1.5 list-disc list-inside">
+              <li><strong>Métricas de clasificación:</strong> Sensibilidad (Recall), F1-Score, F2-Score, ROC-AUC, Precisión y Matriz de Confusión.</li>
+              <li><strong>Auditoría poblacional:</strong> Índice PSI (Population Stability Index) para verificar si los perfiles de los nuevos pacientes coinciden con la población de desarrollo.</li>
+              <li><strong>Pureza y Silueta:</strong> Coherencia de los conglomerados con el diagnóstico real.</li>
+            </ul>
           </div>
         </div>
 
+        <!-- Detalle de los 3 fenotipos K-Modes -->
         <div class="border-t border-slate-200 pt-5 space-y-3">
-          <h4 class="text-sm font-bold text-slate-800">Descripción de los 3 Perfiles Clínicos (K-Modes):</h4>
+          <h4 class="text-sm font-bold text-slate-800">Descripción de los 3 Perfiles Fenotípicos (K-Modes):</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-              <span class="font-bold text-slate-800 block mb-1">Cluster 0: Perfil Sano / Sin Cuadro</span>
-              <p class="text-slate-600">Pacientes asintomáticos o sin ninguno de los síntomas cardinales, con diagnóstico negativo (0,0,0,0,0).</p>
+              <span class="font-bold text-slate-800 block mb-1">Cluster 0: Sin Cuadro Cardinal / Asintomático</span>
+              <p class="text-slate-600">Pacientes sin el complejo sindrómico típico de dengue. Muy baja probabilidad de confirmación.</p>
             </div>
             <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
               <span class="font-bold text-slate-800 block mb-1">Cluster 1: Dengue Típico (sin rash)</span>
-              <p class="text-slate-600">Fiebre + Cefalea + Mialgia con diagnóstico positivo de dengue, pero sin erupción cutánea (1,1,1,0,1).</p>
+              <p class="text-slate-600">Fiebre + Cefalea + Mialgia cardinal sin erupción cutánea. Cuadro clásico de dengue común.</p>
             </div>
             <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
               <span class="font-bold text-slate-800 block mb-1">Cluster 2: Dengue Completo (con rash)</span>
-              <p class="text-slate-600">Presentación florida: Fiebre + Cefalea + Mialgia + Exantema con diagnóstico positivo de dengue (1,1,1,1,1).</p>
+              <p class="text-slate-600">Presentación cardinal florida acompañada de exantema cutáneo. Alta correlación diagnóstica.</p>
             </div>
           </div>
         </div>
@@ -531,34 +770,56 @@
   <!-- Footer -->
   <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-      Proyecto Final Integrador (TFI) — Maestría en Ciencia y Tecnología de Datos | Herramienta con fines analíticos y académicos.
+      Proyecto Final Integrador (TFI) — Maestría en Ciencia y Tecnología de Datos | Herramienta de Apoyo y Evaluación.
     </div>
   </footer>
 
-  <!-- Frontend Logic -->
+  <!-- Frontend Logic Script -->
   <script>
-    let selectedFile = null;
+    let selectedMetricsFile = null;
+    let selectedClinicalFile = null;
     let rocChartInstance = null;
     let prChartInstance = null;
     let kmBarChartInstance = null;
 
-    // Tabs navigation
-    function switchTab(tabId) {
-      ['tabBatch', 'tabSingle', 'tabDocs'].forEach(id => {
+    // Tabs Principales: tabClinical, tabMetrics, tabDocs
+    function switchMainTab(tabId) {
+      ['tabClinical', 'tabMetrics', 'tabDocs'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       document.getElementById(tabId).classList.remove('hidden');
 
-      // Update button borders
-      document.getElementById('btnTabBatch').className = (tabId === 'tabBatch') ?
+      // Actualizar estilos de botones de pestañas principales
+      const isClinical = (tabId === 'tabClinical');
+      const isMetrics = (tabId === 'tabMetrics');
+      const isDocs = (tabId === 'tabDocs');
+
+      document.getElementById('btnTabClinical').className = isClinical ?
         'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2' :
         'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
-      document.getElementById('btnTabSingle').className = (tabId === 'tabSingle') ?
+
+      document.getElementById('btnTabMetrics').className = isMetrics ?
+        'py-3 px-1 border-b-2 border-indigo-600 text-indigo-700 font-bold flex items-center space-x-2' :
+        'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
+
+      document.getElementById('btnTabDocs').className = isDocs ?
         'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2' :
         'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
-      document.getElementById('btnTabDocs').className = (tabId === 'tabDocs') ?
-        'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2' :
-        'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
+    }
+
+    // Sub-pestañas dentro de Evaluación Clínica: Individual vs Lote
+    function switchClinicalSubTab(subId) {
+      const isIndiv = (subId === 'subIndividual');
+      document.getElementById('subIndividual').classList.toggle('hidden', !isIndiv);
+      document.getElementById('subBatch').classList.toggle('hidden', isIndiv);
+
+      document.getElementById('btnSubIndividual').className = isIndiv ?
+        'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-teal-600 text-white shadow-sm transition-all' :
+        'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all';
+
+      document.getElementById('btnSubBatch').className = !isIndiv ?
+        'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-teal-600 text-white shadow-sm transition-all' :
+        'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all';
     }
 
     // Health check on load
@@ -580,106 +841,341 @@
     }
     checkHealth();
 
-    // Drag and drop handlers
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    const fileSelectedBar = document.getElementById('fileSelectedBar');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const fileSizeDisplay = document.getElementById('fileSizeDisplay');
-    const btnCancelFile = document.getElementById('btnCancelFile');
-    const btnRunEvaluation = document.getElementById('btnRunEvaluation');
+    // ==============================================================
+    // LÓGICA: EVALUACIÓN INDIVIDUAL
+    // ==============================================================
+    const singleModelChoice = document.getElementById('singleModelChoice');
+    const fieldFeverDuration = document.getElementById('fieldFeverDuration');
+    const fieldAge = document.getElementById('fieldAge');
 
-    dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-teal-500', 'bg-teal-50/50'); });
-    dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('border-teal-500', 'bg-teal-50/50'); });
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('border-teal-500', 'bg-teal-50/50');
-      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length) handleFile(e.target.files[0]);
-    });
-
-    function handleFile(file) {
-      if (!file.name.endsWith('.csv')) {
-        alert("Por favor seleccione un archivo con formato .csv");
-        return;
+    singleModelChoice.addEventListener('change', () => {
+      const choice = singleModelChoice.value;
+      if (choice === 'kmodes') {
+        fieldFeverDuration.classList.add('opacity-40');
+        fieldAge.classList.add('opacity-40');
+      } else {
+        fieldFeverDuration.classList.remove('opacity-40');
+        fieldAge.classList.remove('opacity-40');
       }
-      selectedFile = file;
-      fileNameDisplay.textContent = file.name;
-      fileSizeDisplay.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
-      dropzone.classList.add('hidden');
-      fileSelectedBar.classList.remove('hidden');
-      hideAlerts();
-    }
-
-    btnCancelFile.addEventListener('click', () => {
-      selectedFile = null;
-      fileInput.value = '';
-      fileSelectedBar.classList.add('hidden');
-      dropzone.classList.remove('hidden');
-      hideAlerts();
     });
 
-    function hideAlerts() {
-      document.getElementById('warningBox').classList.add('hidden');
-      document.getElementById('errorBox').classList.add('hidden');
-    }
-
-    // Run Evaluation
-    btnRunEvaluation.addEventListener('click', async () => {
-      if (!selectedFile) return;
-      hideAlerts();
-      document.getElementById('loadingOverlay').classList.remove('hidden');
-      document.getElementById('resultsContainer').classList.add('hidden');
-
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('model', document.getElementById('modelSelector').value);
+    document.getElementById('singleForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const model = singleModelChoice.value;
+      const payload = {
+        model: model,
+        Fever_Duration: parseInt(document.getElementById('inpFeverDuration').value) || 3,
+        Age: parseFloat(document.getElementById('inpAge').value) || 30.0,
+        Fever: parseInt(document.getElementById('inpFever').value),
+        Headache: parseInt(document.getElementById('inpHeadache').value),
+        Myalgia: parseInt(document.getElementById('inpMyalgia').value),
+        Rash: parseInt(document.getElementById('inpRash').value)
+      };
 
       try {
-        const response = await fetch('/evaluate', { method: 'POST', body: formData });
-        const result = await response.json();
-        document.getElementById('loadingOverlay').classList.add('hidden');
+        const res = await fetch('/clinical/predict-single', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const out = await res.json();
+        if (!res.ok) {
+          alert("Error: " + (out.detail || "Error en inferencia clínica"));
+          return;
+        }
 
-        if (!response.ok) {
-          const errList = document.getElementById('errorList');
+        const card = document.getElementById('singleResultCard');
+        card.classList.remove('hidden');
+
+        document.getElementById('singleModelBadge').textContent = out.model_used;
+        document.getElementById('singleDisclaimer').textContent = out.disclaimer;
+
+        const hasCb = (out.probability !== null && out.probability !== undefined);
+        const hasKm = (out.assigned_cluster !== null && out.assigned_cluster !== undefined);
+
+        // Bloque CatBoost
+        const probBox = document.getElementById('singleProbBox');
+        const cbBox = document.getElementById('singleCbBox');
+        if (hasCb) {
+          probBox.classList.remove('hidden');
+          cbBox.classList.remove('hidden');
+          document.getElementById('singleDiagTitle').textContent = out.diagnosis_suggested;
+          document.getElementById('singleDiagSub').textContent = `Prioridad Clínica: ${out.clinical_priority} (Umbral de corte: ${out.optimal_threshold})`;
+          document.getElementById('singleProbBadge').textContent = `${(out.probability * 100).toFixed(1)}%`;
+          document.getElementById('singleLabRec').textContent = out.lab_recommendation;
+
+          if (out.prediction === 1) {
+            card.className = 'mt-6 p-6 rounded-xl border border-rose-300 bg-rose-50/40 space-y-4';
+            document.getElementById('singleProbBadge').className = 'text-base font-black px-3 py-1 rounded-lg bg-rose-200 text-rose-900';
+          } else {
+            card.className = 'mt-6 p-6 rounded-xl border border-emerald-300 bg-emerald-50/40 space-y-4';
+            document.getElementById('singleProbBadge').className = 'text-base font-black px-3 py-1 rounded-lg bg-emerald-200 text-emerald-900';
+          }
+        } else {
+          probBox.classList.add('hidden');
+          cbBox.classList.add('hidden');
+          document.getElementById('singleDiagTitle').textContent = out.cluster_profile;
+          document.getElementById('singleDiagSub').textContent = `Clasificación fenotípica sin requerir Outcome (Cluster ${out.assigned_cluster})`;
+          card.className = 'mt-6 p-6 rounded-xl border border-indigo-300 bg-indigo-50/40 space-y-4';
+        }
+
+        // Bloque K-Modes
+        const kmBox = document.getElementById('singleKmBox');
+        if (hasKm) {
+          kmBox.classList.remove('hidden');
+          document.getElementById('singleClusterRec').textContent = `${out.cluster_profile} (Cluster ${out.assigned_cluster})`;
+          document.getElementById('singleClusterDetail').textContent = out.cluster_description ? `Arquetipo centroide: ${out.cluster_description}` : 'Distancia de Hamming sobre síntomas clínicos cardinales.';
+        } else {
+          kmBox.classList.add('hidden');
+        }
+
+      } catch (err) {
+        alert("Error al conectar con la API: " + err.message);
+      }
+    });
+
+    // ==============================================================
+    // LÓGICA: EVALUACIÓN CLÍNICA POR LOTE (SIN OUTCOME)
+    // ==============================================================
+    const clinicalDropzone = document.getElementById('clinicalDropzone');
+    const clinicalFileInput = document.getElementById('clinicalFileInput');
+    const clinicalFileBar = document.getElementById('clinicalFileBar');
+    const clinicalFileNameDisplay = document.getElementById('clinicalFileNameDisplay');
+    const clinicalFileSizeDisplay = document.getElementById('clinicalFileSizeDisplay');
+    const btnCancelClinicalFile = document.getElementById('btnCancelClinicalFile');
+    const btnRunClinicalBatch = document.getElementById('btnRunClinicalBatch');
+
+    clinicalDropzone.addEventListener('click', () => clinicalFileInput.click());
+    clinicalDropzone.addEventListener('dragover', (e) => { e.preventDefault(); clinicalDropzone.classList.add('border-teal-500', 'bg-teal-50/50'); });
+    clinicalDropzone.addEventListener('dragleave', () => { clinicalDropzone.classList.remove('border-teal-500', 'bg-teal-50/50'); });
+    clinicalDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      clinicalDropzone.classList.remove('border-teal-500', 'bg-teal-50/50');
+      if (e.dataTransfer.files.length) handleClinicalFile(e.dataTransfer.files[0]);
+    });
+    clinicalFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleClinicalFile(e.target.files[0]);
+    });
+
+    function handleClinicalFile(file) {
+      if (!file.name.endsWith('.csv')) {
+        alert("Por favor seleccione un archivo en formato .csv");
+        return;
+      }
+      selectedClinicalFile = file;
+      clinicalFileNameDisplay.textContent = file.name;
+      clinicalFileSizeDisplay.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+      clinicalDropzone.classList.add('hidden');
+      clinicalFileBar.classList.remove('hidden');
+      document.getElementById('clinicalWarningBox').classList.add('hidden');
+      document.getElementById('clinicalErrorBox').classList.add('hidden');
+    }
+
+    btnCancelClinicalFile.addEventListener('click', () => {
+      selectedClinicalFile = null;
+      clinicalFileInput.value = '';
+      clinicalFileBar.classList.add('hidden');
+      clinicalDropzone.classList.remove('hidden');
+      document.getElementById('clinicalWarningBox').classList.add('hidden');
+      document.getElementById('clinicalErrorBox').classList.add('hidden');
+    });
+
+    btnRunClinicalBatch.addEventListener('click', async () => {
+      if (!selectedClinicalFile) return;
+      document.getElementById('clinicalWarningBox').classList.add('hidden');
+      document.getElementById('clinicalErrorBox').classList.add('hidden');
+      document.getElementById('clinicalLoadingOverlay').classList.remove('hidden');
+      document.getElementById('clinicalResultsContainer').classList.add('hidden');
+
+      const formData = new FormData();
+      formData.append('file', selectedClinicalFile);
+      formData.append('model', document.getElementById('clinicalBatchModelSelector').value);
+
+      try {
+        const res = await fetch('/clinical/evaluate-batch', { method: 'POST', body: formData });
+        const result = await res.json();
+        document.getElementById('clinicalLoadingOverlay').classList.add('hidden');
+
+        if (!res.ok) {
+          const errList = document.getElementById('clinicalErrorList');
           errList.innerHTML = '';
-          const errors = result.errors || [result.detail || "Error al procesar el dataset."];
+          const errors = result.errors || [result.detail || "Error al procesar el lote clínico."];
           errors.forEach(err => {
             const li = document.createElement('li');
             li.textContent = err;
             errList.appendChild(li);
           });
-          document.getElementById('errorBox').classList.remove('hidden');
+          document.getElementById('clinicalErrorBox').classList.remove('hidden');
           return;
         }
 
         // Warnings
         if (result.warnings && result.warnings.length > 0) {
-          const warnList = document.getElementById('warningList');
+          const warnList = document.getElementById('clinicalWarningList');
           warnList.innerHTML = '';
           result.warnings.forEach(w => {
             const li = document.createElement('li');
             li.textContent = w;
             warnList.appendChild(li);
           });
-          document.getElementById('warningBox').classList.remove('hidden');
+          document.getElementById('clinicalWarningBox').classList.remove('hidden');
         }
 
-        renderResults(result);
+        renderClinicalBatchResults(result);
       } catch (err) {
-        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('clinicalLoadingOverlay').classList.add('hidden');
         alert("Error de conexión con la API: " + err.message);
       }
     });
 
-    // Render Results
-    function renderResults(data) {
-      document.getElementById('resultsContainer').classList.remove('hidden');
+    function renderClinicalBatchResults(data) {
+      document.getElementById('clinicalResultsContainer').classList.remove('hidden');
+      document.getElementById('clinTotalPatients').textContent = `${data.n_filas} pacientes`;
 
-      // CatBoost render
+      // CatBoost Clinical
+      const cbClin = data.catboost_clinical;
+      const cbSection = document.getElementById('clinCbSection');
+      if (cbClin) {
+        cbSection.classList.remove('hidden');
+        document.getElementById('clinHighPriorityCount').textContent = cbClin.casos_sospecha_alta;
+        document.getElementById('clinHighPriorityPct').textContent = `${(cbClin.pct_sospecha_alta * 100).toFixed(1)}% del lote`;
+        document.getElementById('clinIntermPriorityCount').textContent = cbClin.distribucion_prioridad.Intermedia || 0;
+        document.getElementById('clinLowPriorityCount').textContent = cbClin.distribucion_prioridad.Baja || 0;
+        document.getElementById('clinMeanProba').textContent = `${(cbClin.media_probabilidad * 100).toFixed(1)}%`;
+
+        const v = cbClin.distribucion_ventanas_diagnosticas || {};
+        document.getElementById('clinVentanaEarly').textContent = `${v.fase_temprana_ns1_pcr || 0} pac.`;
+        document.getElementById('clinVentanaMid').textContent = `${v.fase_intermedia_ns1_igm || 0} pac.`;
+        document.getElementById('clinVentanaLate').textContent = `${v.fase_tardia_igm || 0} pac.`;
+      } else {
+        cbSection.classList.add('hidden');
+      }
+
+      // K-Modes Clinical
+      const kmClin = data.kmodes_clinical;
+      const kmSection = document.getElementById('clinKmSection');
+      const kmGrid = document.getElementById('clinKmGrid');
+      kmGrid.innerHTML = '';
+      if (kmClin && kmClin.distribucion_clusters) {
+        kmSection.classList.remove('hidden');
+        for (const [cId, cInfo] of Object.entries(kmClin.distribucion_clusters)) {
+          const card = document.createElement('div');
+          card.className = 'bg-slate-50 border border-slate-200 rounded-xl p-4';
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">Cluster ${cId}</span>
+              <span class="text-xs font-bold text-slate-800">${cInfo.n} pac. (${(cInfo.pct * 100).toFixed(1)}%)</span>
+            </div>
+            <h5 class="text-xs font-bold text-slate-900 mt-2">${cInfo.nombre}</h5>
+            <p class="text-[11px] text-slate-500 mt-1">Asignado por proximidad de síntomas.</p>
+          `;
+          kmGrid.appendChild(card);
+        }
+      } else {
+        kmSection.classList.add('hidden');
+      }
+
+      // Tabla Preview Clínico
+      renderTableGeneric(data.sample_predictions, 'clinicalPreviewHead', 'clinicalPreviewBody');
+    }
+
+    // ==============================================================
+    // LÓGICA: AUDITORÍA DE MÉTRICAS (CON OUTCOME)
+    // ==============================================================
+    const metricsDropzone = document.getElementById('metricsDropzone');
+    const metricsFileInput = document.getElementById('metricsFileInput');
+    const metricsFileBar = document.getElementById('metricsFileBar');
+    const metricsFileNameDisplay = document.getElementById('metricsFileNameDisplay');
+    const metricsFileSizeDisplay = document.getElementById('metricsFileSizeDisplay');
+    const btnCancelMetricsFile = document.getElementById('btnCancelMetricsFile');
+    const btnRunMetrics = document.getElementById('btnRunMetrics');
+
+    metricsDropzone.addEventListener('click', () => metricsFileInput.click());
+    metricsDropzone.addEventListener('dragover', (e) => { e.preventDefault(); metricsDropzone.classList.add('border-indigo-500', 'bg-indigo-50/50'); });
+    metricsDropzone.addEventListener('dragleave', () => { metricsDropzone.classList.remove('border-indigo-500', 'bg-indigo-50/50'); });
+    metricsDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      metricsDropzone.classList.remove('border-indigo-500', 'bg-indigo-50/50');
+      if (e.dataTransfer.files.length) handleMetricsFile(e.dataTransfer.files[0]);
+    });
+    metricsFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleMetricsFile(e.target.files[0]);
+    });
+
+    function handleMetricsFile(file) {
+      if (!file.name.endsWith('.csv')) {
+        alert("Por favor seleccione un archivo con formato .csv");
+        return;
+      }
+      selectedMetricsFile = file;
+      metricsFileNameDisplay.textContent = file.name;
+      metricsFileSizeDisplay.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+      metricsDropzone.classList.add('hidden');
+      metricsFileBar.classList.remove('hidden');
+      document.getElementById('metricsWarningBox').classList.add('hidden');
+      document.getElementById('metricsErrorBox').classList.add('hidden');
+    }
+
+    btnCancelMetricsFile.addEventListener('click', () => {
+      selectedMetricsFile = null;
+      metricsFileInput.value = '';
+      metricsFileBar.classList.add('hidden');
+      metricsDropzone.classList.remove('hidden');
+      document.getElementById('metricsWarningBox').classList.add('hidden');
+      document.getElementById('metricsErrorBox').classList.add('hidden');
+    });
+
+    btnRunMetrics.addEventListener('click', async () => {
+      if (!selectedMetricsFile) return;
+      document.getElementById('metricsWarningBox').classList.add('hidden');
+      document.getElementById('metricsErrorBox').classList.add('hidden');
+      document.getElementById('metricsLoadingOverlay').classList.remove('hidden');
+      document.getElementById('metricsResultsContainer').classList.add('hidden');
+
+      const formData = new FormData();
+      formData.append('file', selectedMetricsFile);
+      formData.append('model', document.getElementById('metricsModelSelector').value);
+
+      try {
+        const response = await fetch('/metrics/evaluate', { method: 'POST', body: formData });
+        const result = await response.json();
+        document.getElementById('metricsLoadingOverlay').classList.add('hidden');
+
+        if (!response.ok) {
+          const errList = document.getElementById('metricsErrorList');
+          errList.innerHTML = '';
+          const errors = result.errors || [result.detail || "Error al procesar el dataset de métricas."];
+          errors.forEach(err => {
+            const li = document.createElement('li');
+            li.textContent = err;
+            errList.appendChild(li);
+          });
+          document.getElementById('metricsErrorBox').classList.remove('hidden');
+          return;
+        }
+
+        if (result.warnings && result.warnings.length > 0) {
+          const warnList = document.getElementById('metricsWarningList');
+          warnList.innerHTML = '';
+          result.warnings.forEach(w => {
+            const li = document.createElement('li');
+            li.textContent = w;
+            warnList.appendChild(li);
+          });
+          document.getElementById('metricsWarningBox').classList.remove('hidden');
+        }
+
+        renderMetricsResults(result);
+      } catch (err) {
+        document.getElementById('metricsLoadingOverlay').classList.add('hidden');
+        alert("Error al conectar con la API: " + err.message);
+      }
+    });
+
+    function renderMetricsResults(data) {
+      document.getElementById('metricsResultsContainer').classList.remove('hidden');
+
+      // CatBoost Render
       if (data.catboost) {
         document.getElementById('catboostSection').classList.remove('hidden');
         const cb = data.catboost;
@@ -710,25 +1206,19 @@
         document.getElementById('cbBrier').textContent = cb.brier;
         document.getElementById('cbMCC').textContent = cb.mcc;
 
-        // Render Charts
         renderRocChart(cb.curvas.roc);
         renderPrChart(cb.curvas.pr);
-
-        // Bootstrap Table
         renderCiTable(cb.ic95);
-
-        // Subgroups
         renderSubgroups(cb.por_subgrupo);
       } else {
         document.getElementById('catboostSection').classList.add('hidden');
       }
 
-      // K-Modes render
+      // K-Modes Render
       if (data.kmodes) {
         document.getElementById('kmodesSection').classList.remove('hidden');
         const km = data.kmodes;
 
-        // PSI badge
         const psi = km.psi_tamanos;
         const psiBadge = document.getElementById('kmPsiBadge');
         if (psi < 0.10) {
@@ -742,64 +1232,43 @@
           psiBadge.textContent = `PSI: ${psi} (Alerta: Desvío Severo)`;
         }
 
-        // Stability metrics
         document.getElementById('kmCostHold').textContent = km.costo_por_obs.holdout;
         document.getElementById('kmCostTrain').textContent = km.costo_por_obs.train;
         document.getElementById('kmCostDelta').textContent = `delta: ${km.costo_por_obs.delta}`;
         document.getElementById('kmSilGlobal').textContent = km.silhouette.global !== null ? km.silhouette.global : 'N/A';
         document.getElementById('kmPurity').textContent = `Pureza: ${km.coincidencia_con_outcome.pureza} | NMI: ${km.coincidencia_con_outcome.nmi}`;
 
-        // Cluster cards
         renderClusterCards(km);
-
-        // KModes bar chart
         renderKmodesBarChart(km);
       } else {
         document.getElementById('kmodesSection').classList.add('hidden');
       }
 
-      // Sample Predictions Table
-      if (data.sample_predictions && data.sample_predictions.length > 0) {
-        renderPreviewTable(data.sample_predictions);
-      }
+      renderTableGeneric(data.sample_predictions, 'previewTableHead', 'previewTableBody');
     }
 
+    // ==============================================================
+    // UTILIDADES: GRÁFICOS Y TABLAS
+    // ==============================================================
     function renderRocChart(rocData) {
       const ctx = document.getElementById('rocChart').getContext('2d');
       if (rocChartInstance) rocChartInstance.destroy();
 
-      const points = rocData.fpr.map((x, i) => ({ x: x, y: rocData.tpr[i] }));
+      const points = (rocData.fpr || []).map((fpr, i) => ({ x: fpr, y: rocData.tpr[i] }));
       rocChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           datasets: [
-            {
-              label: 'Curva ROC (CatBoost)',
-              data: points,
-              borderColor: '#4f46e5',
-              backgroundColor: 'rgba(79, 70, 229, 0.1)',
-              fill: true,
-              borderWidth: 2,
-              tension: 0.1,
-              pointRadius: 0
-            },
-            {
-              label: 'Azar (Diagonal)',
-              data: [{x:0, y:0}, {x:1, y:1}],
-              borderColor: '#94a3b8',
-              borderDash: [5, 5],
-              fill: false,
-              borderWidth: 1.5,
-              pointRadius: 0
-            }
+            { label: 'ROC CatBoost', data: points, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.1, pointRadius: 0 },
+            { label: 'Azar (AUC=0.5)', data: [{x:0, y:0}, {x:1, y:1}], borderColor: '#94a3b8', borderDash: [5, 5], pointRadius: 0 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { type: 'linear', min: 0, max: 1, title: { display: true, text: 'FPR (1 - Especificidad)', font: { size: 10 } } },
-            y: { min: 0, max: 1, title: { display: true, text: 'TPR (Sensibilidad)', font: { size: 10 } } }
+            x: { type: 'linear', min: 0, max: 1, title: { display: true, text: '1 - Especificidad (FPR)', font: { size: 10 } } },
+            y: { min: 0, max: 1, title: { display: true, text: 'Sensibilidad (TPR)', font: { size: 10 } } }
           },
           plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
         }
@@ -810,29 +1279,18 @@
       const ctx = document.getElementById('prChart').getContext('2d');
       if (prChartInstance) prChartInstance.destroy();
 
-      const points = prData.recall.map((x, i) => ({ x: x, y: prData.precision[i] }));
+      const points = (prData.recall || []).map((rec, i) => ({ x: rec, y: prData.precision[i] }));
       prChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-          datasets: [
-            {
-              label: 'Curva Precision-Recall',
-              data: points,
-              borderColor: '#0d9488',
-              backgroundColor: 'rgba(13, 148, 136, 0.1)',
-              fill: true,
-              borderWidth: 2,
-              tension: 0.1,
-              pointRadius: 0
-            }
-          ]
+          datasets: [{ label: 'Precisión - Recall', data: points, borderColor: '#0d9488', backgroundColor: 'rgba(13, 148, 136, 0.1)', fill: true, tension: 0.1, pointRadius: 0 }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { type: 'linear', min: 0, max: 1, title: { display: true, text: 'Recall (Sensibilidad)', font: { size: 10 } } },
-            y: { min: 0, max: 1, title: { display: true, text: 'Precisión', font: { size: 10 } } }
+            x: { type: 'linear', min: 0, max: 1, title: { display: true, text: 'Sensibilidad (Recall)', font: { size: 10 } } },
+            y: { min: 0, max: 1, title: { display: true, text: 'Precisión (VPP)', font: { size: 10 } } }
           },
           plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
         }
@@ -842,11 +1300,13 @@
     function renderCiTable(icData) {
       const tbody = document.getElementById('ciTableBody');
       tbody.innerHTML = '';
+      if (!icData) return;
+
       const rows = [
-        { metric: 'Sensibilidad (Recall)', ci: icData.recall, desc: 'Capacidad de detectar dengue positivo' },
-        { metric: 'Precisión (VPP)', ci: icData.precision, desc: 'Probabilidad de que un positivo sea real' },
-        { metric: 'F1-Score', ci: icData.f1, desc: 'Media armónica optimizada en validación cruzada' },
-        { metric: 'F2-Score', ci: icData.f2, desc: 'Ponderación clínica que prioriza detección de casos' },
+        { metric: 'Sensibilidad (Recall)', ci: icData.recall, desc: 'Capacidad de detectar verdaderos positivos de dengue' },
+        { metric: 'F1-Score', ci: icData.f1, desc: 'Media armónica entre precisión y recall' },
+        { metric: 'Precisión (VPP)', ci: icData.precision, desc: 'Certeza ante una alarma positiva' },
+        { metric: 'F2-Score', ci: icData.f2, desc: 'Prioriza evitar falsos negativos en triage' },
         { metric: 'ROC-AUC', ci: icData.roc_auc, desc: 'Poder de discriminación global' }
       ];
 
@@ -867,7 +1327,6 @@
       const container = document.getElementById('subgroupContainer');
       const tablesDiv = document.getElementById('subgroupTables');
       tablesDiv.innerHTML = '';
-
       if (!subgroups || Object.keys(subgroups).length === 0) {
         container.classList.add('hidden');
         return;
@@ -903,9 +1362,7 @@
           tablesDiv.appendChild(card);
         }
       }
-
-      if (hasData) container.classList.remove('hidden');
-      else container.classList.add('hidden');
+      container.classList.toggle('hidden', !hasData);
     }
 
     function renderClusterCards(km) {
@@ -978,13 +1435,13 @@
       });
     }
 
-    function renderPreviewTable(records) {
-      const thead = document.getElementById('previewTableHead');
-      const tbody = document.getElementById('previewTableBody');
+    function renderTableGeneric(records, headId, bodyId) {
+      const thead = document.getElementById(headId);
+      const tbody = document.getElementById(bodyId);
       thead.innerHTML = '';
       tbody.innerHTML = '';
+      if (!records || !records.length) return;
 
-      if (!records.length) return;
       const cols = Object.keys(records[0]);
       cols.forEach(c => {
         const th = document.createElement('th');
@@ -1002,7 +1459,11 @@
           if (c === 'pred_catboost') {
             td.innerHTML = r[c] === 1 ? '<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">Positivo (1)</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Negativo (0)</span>';
           } else if (c === 'proba_dengue') {
-            td.innerHTML = `<span class="font-bold text-indigo-700">${(r[c] * 100).toFixed(1)}%</span>`;
+            td.innerHTML = `<span class="font-bold text-teal-700">${(r[c] * 100).toFixed(1)}%</span>`;
+          } else if (c === 'prioridad_clinica') {
+            const prio = r[c];
+            const cls = prio === 'Alta' ? 'bg-rose-100 text-rose-800' : (prio === 'Intermedia' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700');
+            td.innerHTML = `<span class="px-1.5 py-0.5 rounded font-bold ${cls}">${prio}</span>`;
           } else {
             td.textContent = r[c];
           }
@@ -1011,53 +1472,6 @@
         tbody.appendChild(tr);
       });
     }
-
-    // Single Form Submit
-    document.getElementById('singleForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const payload = {
-        Fever_Duration: parseInt(document.getElementById('inpFeverDuration').value),
-        Age: parseFloat(document.getElementById('inpAge').value),
-        Fever: parseInt(document.getElementById('inpFever').value),
-        Headache: parseInt(document.getElementById('inpHeadache').value),
-        Myalgia: parseInt(document.getElementById('inpMyalgia').value),
-        Rash: parseInt(document.getElementById('inpRash').value)
-      };
-
-      try {
-        const res = await fetch('/predict/clinical-support', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const out = await res.json();
-        if (!res.ok) {
-          alert("Error: " + (out.detail || "Error en inferencia"));
-          return;
-        }
-
-        const card = document.getElementById('singleResultCard');
-        card.classList.remove('hidden');
-
-        document.getElementById('singleDiagTitle').textContent = out.diagnosis_suggested;
-        document.getElementById('singleDiagSub').textContent = `Prioridad Clínica: ${out.clinical_priority} (Umbral de corte: ${out.optimal_threshold})`;
-        document.getElementById('singleProbBadge').textContent = `${(out.probability * 100).toFixed(1)}%`;
-        
-        if (out.prediction === 1) {
-          card.className = 'mt-6 p-6 rounded-xl border border-rose-300 bg-rose-50/50 space-y-4';
-          document.getElementById('singleProbBadge').className = 'text-base font-black px-3 py-1 rounded-lg bg-rose-200 text-rose-900';
-        } else {
-          card.className = 'mt-6 p-6 rounded-xl border border-emerald-300 bg-emerald-50/50 space-y-4';
-          document.getElementById('singleProbBadge').className = 'text-base font-black px-3 py-1 rounded-lg bg-emerald-200 text-emerald-900';
-        }
-
-        document.getElementById('singleLabRec').textContent = out.lab_recommendation;
-        document.getElementById('singleClusterRec').textContent = `${out.cluster_profile} (Cluster ${out.assigned_cluster})`;
-        document.getElementById('singleDisclaimer').textContent = out.disclaimer;
-      } catch (err) {
-        alert("Error al conectar con la API: " + err.message);
-      }
-    });
   </script>
 </body>
 </html>
