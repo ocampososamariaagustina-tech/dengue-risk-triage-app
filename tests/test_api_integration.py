@@ -9,7 +9,16 @@ sys.path.append(str(PROJECT_ROOT))
 
 from fastapi import UploadFile
 from src.ml.model_loader import ModelRegistry
-from src.api.main import health_check, evaluate_dataset, predict_single_patient, export_evaluated_csv
+from src.api.main import (
+    health_check,
+    evaluate_dataset,
+    evaluate_symptoms_cohort,
+    predict_single_patient,
+    export_evaluated_csv,
+    export_symptoms_csv,
+    get_sample_symptoms_csv,
+    get_sample_holdout_csv,
+)
 from src.api.schemas import PatientInput
 
 
@@ -103,10 +112,36 @@ def test_full_pipeline():
     print(f"    - Conducta / Laboratorio: {res_low.lab_recommendation}")
     print(f"    - Cluster Fenotípico K-Modes: {res_low.cluster_profile} (Cluster {res_low.assigned_cluster})")
 
-    print("\n[5/5] Probando Endpoint GET /export-evaluated-csv...")
+    print("\n[5/6] Probando Endpoint POST /evaluate/symptoms-cohort (CSV SIN Outcome)...")
+    sym_csv_path = PROJECT_ROOT / "dev" / "sample_sintomas_sin_outcome.csv"
+    with open(sym_csv_path, "rb") as f:
+        sym_bytes = f.read()
+
+    upload_sym_file = UploadFile(filename="sample_sintomas_sin_outcome.csv", file=io.BytesIO(sym_bytes))
+    sym_result = evaluate_symptoms_cohort(upload_sym_file)
+
+    assert sym_result["status"] == "ok"
+    assert sym_result["n_filas"] == 40
+    assert "kmodes_sintomas" in sym_result
+    kms = sym_result["kmodes_sintomas"]
+    assert "tamano_clusters" in kms
+    assert "psi_tamanos" in kms
+    assert "comparativa_distribucion" in kms
+    assert len(sym_result["sample_predictions"]) == 30
+    assert "cluster_asignado" in sym_result["sample_predictions"][0]
+    assert "perfil_clinico" in sym_result["sample_predictions"][0]
+    print(f" -> Cohorte evaluada sin Outcome: {sym_result['n_filas']} pacientes.")
+    print(f"    - Estabilidad Poblacional (PSI): {kms['psi_tamanos']} ({kms['psi_interpretacion']})")
+    print(f"    - Costo Hamming Medio: {kms['costo_por_obs']['uploaded']} (Train: {kms['costo_por_obs']['train']})")
+    print(f"    - Silhouette Score: {kms['silhouette']['global']}")
+    print(f"    - Distribución Clusters: {kms['tamano_clusters']}")
+
+    print("\n[6/6] Probando Exportaciones GET /export-evaluated-csv y GET /export-symptoms-csv...")
     export_res = export_evaluated_csv()
     assert export_res.media_type == "text/csv"
-    print(" -> Exportación de CSV lista para descarga.")
+    export_sym_res = export_symptoms_csv()
+    assert export_sym_res.media_type == "text/csv"
+    print(" -> Ambas exportaciones de CSV listas para descarga.")
 
     print("\n=======================================================")
     print(">>> TODOS LOS TESTS DE INTEGRACIÓN PASARON AL 100% <<<")

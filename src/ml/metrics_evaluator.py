@@ -25,6 +25,7 @@ from sklearn.metrics import (
 
 FEATURES_CB = ["Fever_Duration", "Age", "Headache", "Myalgia", "Rash", "Fever"]
 FEATURES_KM = ["Fever", "Headache", "Myalgia", "Rash", "Outcome"]
+FEATURES_SINTOMAS = ["Fever", "Headache", "Myalgia", "Rash"]
 
 
 def validate_dataframe(df: pd.DataFrame, model_type: str = "both") -> Tuple[List[str], List[str]]:
@@ -411,4 +412,191 @@ def generate_predictions_table(
         nombres_dict = metadata.get("models", {}).get("kmodes", {}).get("cluster_names", {})
         out_df["cluster_nombre"] = [nombres_dict.get(str(c), f"Cluster {c}") for c in clusters]
 
+    return out_df
+
+
+def validate_symptoms_dataframe(df: pd.DataFrame) -> Tuple[List[str], List[str]]:
+    """Valida un DataFrame que contiene exclusivamente síntomas (sin requerir Outcome)."""
+    errors = []
+    warnings = []
+
+    if len(df) == 0:
+        errors.append("El archivo CSV está vacío.")
+        return errors, warnings
+    if len(df) < 5:
+        warnings.append(f"El dataset tiene solo {len(df)} filas (< 5). Las métricas poblacionales requieren más muestras.")
+
+    missing = [c for c in FEATURES_SINTOMAS if c not in df.columns]
+    if missing:
+        errors.append(f"Faltan columnas de síntomas requeridas: {missing}. Debe contener: {FEATURES_SINTOMAS}")
+        return errors, warnings
+
+    # Normalizar booleanos/strings si vienen en texto
+    for col in FEATURES_SINTOMAS:
+        if df[col].dtype == object or df[col].dtype == bool:
+            df[col] = df[col].astype(str).str.strip().map({
+                "False": 0, "True": 1, "0": 0, "1": 1, "No": 0, "Si": 1, "Sí": 1, "false": 0, "true": 1
+            })
+
+    null_counts = df[FEATURES_SINTOMAS].isnull().sum()
+    cols_with_null = null_counts[null_counts > 0]
+    if not cols_with_null.empty:
+        errors.append(f"Valores nulos en columnas de síntomas obligatorias: {cols_with_null.to_dict()}")
+
+    for col in FEATURES_SINTOMAS:
+        invalid_vals = set(df[col].dropna().unique()) - {0, 1}
+        if invalid_vals:
+            errors.append(f"Columna '{col}' contiene valores fuera de {{0, 1}}: {invalid_vals}")
+
+    return errors, warnings
+
+
+def evaluate_kmodes_sintomas(km: Any, df: pd.DataFrame, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """Calcula métricas de clustering fenotípico para K-Modes basado exclusivamente en síntomas (sin Outcome)."""
+    Xk = df[FEATURES_SINTOMAS].astype(int).values
+    labels = km.predict(Xk)
+    if hasattr(labels, "ravel"):
+        labels = labels.ravel().astype(int)
+
+    n_total = len(Xk)
+    unique_labels, counts = np.unique(labels, return_counts=True)
+    tamano_clusters = {}
+    pct_holdout = {}
+    for c, cnt in zip(unique_labels, counts):
+        c_str = str(int(c))
+        pct = float(cnt / n_total)
+        tamano_clusters[c_str] = {"n": int(cnt), "pct": round(pct, 4)}
+        pct_holdout[c_str] = pct
+
+    # Metadata de entrenamiento
+    km_meta = metadata.get("models", {}).get("kmodes_sintomas", {})
+    train_dist = km_meta.get("train_stats", {}).get("cluster_distribution", {
+        "0": {"count": 580, "pct": 0.3382},
+        "1": {"count": 523, "pct": 0.3050},
+        "2": {"count": 612, "pct": 0.3569}
+    })
+
+    # PSI (Population Stability Index) contra proporciones de train
+    psi = 0.0
+    epsilon = 1e-6
+    for c_str in ["0", "1", "2"]:
+        p_train = train_dist.get(c_str, {}).get("pct", 0.3333)
+        p_hold = pct_holdout.get(c_str, 0.0)
+        p_hold_adj = max(p_hold, epsilon)
+        p_train_adj = max(p_train, epsilon)
+        psi += (p_hold - p_train) * math.log(p_hold_adj / p_train_adj)
+
+    # Costo por observación (distancia Hamming promedio al centroide)
+    centroids = np.asarray(km.cluster_centroids_).astype(int)
+    dist = (Xk != centroids[labels]).sum(axis=1)
+    costo_hold = float(dist.mean())
+    costo_train = float(km_meta.get("train_stats", {}).get("cost_per_obs", 0.52595))
+
+    # Silhouette Hamming
+    silhouette_data = {"global": None, "por_cluster": {}}
+    if 1 < len(unique_labels) < n_total:
+        try:
+            sil_global = float(silhouette_score(Xk, labels, metric="hamming"))
+            s_samples = silhouette_samples(Xk, labels, metric="hamming")
+            silhouette_data["global"] = round(sil_global, 4)
+            for c in unique_labels:
+                silhouette_data["por_cluster"][str(int(c))] = round(float(s_samples[labels == c].mean()), 4)
+        except Exception:
+            pass
+
+    # Perfil de síntomas por cluster (% prevalencia de cada síntoma)
+    df_km = df[FEATURES_SINTOMAS].copy()
+    df_km["cluster"] = labels
+    perfil_por_cluster = {}
+    for c in sorted(unique_labels):
+        c_df = df_km[df_km["cluster"] == c]
+        perfil_por_cluster[str(int(c))] = {
+            col: round(float((c_df[col] == 1).mean()), 4) for col in FEATURES_SINTOMAS
+        }
+
+    # Nombres interpretables y centroides formateados
+    nombres_dict = km_meta.get("cluster_names", {
+        "0": "Perfil oligosintomático / sin síntomas cardinales",
+        "1": "Perfil sintomático típico (fiebre, cefalea, mialgia sin exantema)",
+        "2": "Perfil sintomático completo (fiebre, cefalea, mialgia con exantema)"
+    })
+
+    centroides_formateados = []
+    for i, cent in enumerate(centroids):
+        c_str = str(i)
+        frase = f"Fiebre: {'sí' if cent[0] else 'no'} | Cefalea: {'sí' if cent[1] else 'no'} | Mialgia: {'sí' if cent[2] else 'no'} | Exantema: {'sí' if cent[3] else 'no'}"
+        centroides_formateados.append({
+            "cluster": i,
+            "nombre": nombres_dict.get(c_str, f"Cluster {i}"),
+            "valores": dict(zip(FEATURES_SINTOMAS, [int(x) for x in cent])),
+            "descripcion": frase
+        })
+
+    # Resumen comparativo de distribución para la UI
+    comparativa_dist = []
+    for c_idx in [0, 1, 2]:
+        c_str = str(c_idx)
+        pct_subido = pct_holdout.get(c_str, 0.0)
+        n_subido = tamano_clusters.get(c_str, {}).get("n", 0)
+        pct_base = train_dist.get(c_str, {}).get("pct", 0.0)
+        n_base = train_dist.get(c_str, {}).get("count", 0)
+        delta = pct_subido - pct_base
+        comparativa_dist.append({
+            "cluster": c_idx,
+            "nombre": nombres_dict.get(c_str, f"Cluster {c_idx}"),
+            "n_subido": n_subido,
+            "pct_subido": round(pct_subido * 100, 2),
+            "n_base": n_base,
+            "pct_base": round(pct_base * 100, 2),
+            "delta_pct": round(delta * 100, 2),
+        })
+
+    return {
+        "n_total": n_total,
+        "tamano_clusters": tamano_clusters,
+        "comparativa_distribucion": comparativa_dist,
+        "psi_tamanos": round(float(psi), 4),
+        "psi_interpretacion": (
+            "Distribución muy estable (PSI < 0.1)" if psi < 0.1
+            else ("Cambio moderado (0.1 ≤ PSI < 0.25)" if psi < 0.25 else "Alerta: Deriva poblacional significativa (PSI ≥ 0.25)")
+        ),
+        "psi_status": "normal" if psi < 0.1 else ("warning" if psi < 0.25 else "danger"),
+        "costo_por_obs": {
+            "uploaded": round(costo_hold, 4),
+            "train": round(costo_train, 4),
+            "delta": round(costo_hold - costo_train, 4),
+            "estatus": "Estable" if (costo_hold - costo_train) < 0.2 else "Degradación"
+        },
+        "silhouette": silhouette_data,
+        "centroides": centroides_formateados,
+        "perfil_por_cluster": perfil_por_cluster,
+        "nombres_cluster": nombres_dict,
+    }
+
+
+def generate_symptoms_predictions_table(
+    km_model: Any,
+    df: pd.DataFrame,
+    metadata: Dict[str, Any]
+) -> pd.DataFrame:
+    """Genera DataFrame enriquecido con predicción de cluster por síntomas para exportación y visualización."""
+    out_df = df.copy()
+    Xk = df[FEATURES_SINTOMAS].astype(int).values
+    labels = km_model.predict(Xk)
+    if hasattr(labels, "ravel"):
+        labels = labels.ravel().astype(int)
+
+    centroids = np.asarray(km_model.cluster_centroids_).astype(int)
+    dist = (Xk != centroids[labels]).sum(axis=1)
+
+    km_meta = metadata.get("models", {}).get("kmodes_sintomas", {})
+    nombres_dict = km_meta.get("cluster_names", {
+        "0": "Perfil oligosintomático / sin síntomas cardinales",
+        "1": "Perfil sintomático típico (fiebre, cefalea, mialgia sin exantema)",
+        "2": "Perfil sintomático completo (fiebre, cefalea, mialgia con exantema)"
+    })
+
+    out_df["cluster_asignado"] = labels
+    out_df["perfil_clinico"] = [nombres_dict.get(str(l), f"Cluster {l}") for l in labels]
+    out_df["distancia_centroide"] = dist
     return out_df

@@ -48,18 +48,25 @@
   <!-- Navigation Tabs -->
   <div class="bg-slate-100 border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <nav class="flex space-x-6 text-sm font-medium" aria-label="Tabs">
-        <button id="btnTabBatch" onclick="switchTab('tabBatch')" class="py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-          <span>Evaluación por Lote (Hold-Out / CSV)</span>
+      <nav class="flex space-x-6 text-sm font-medium overflow-x-auto" aria-label="Tabs">
+        <button id="btnTabBatch" onclick="switchTab('tabBatch')" class="py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2 shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          <span>1. Hold-Out (Con Outcome)</span>
         </button>
-        <button id="btnTabSingle" onclick="switchTab('tabSingle')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2">
+        <button id="btnTabSymptoms" onclick="switchTab('tabSymptoms')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2 shrink-0">
+          <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          <span class="flex items-center space-x-1.5">
+            <span>2. Clusters por Síntomas (Sin Outcome)</span>
+            <span class="bg-teal-100 text-teal-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full">Nuevo</span>
+          </span>
+        </button>
+        <button id="btnTabSingle" onclick="switchTab('tabSingle')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2 shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          <span>Triage Individual (Guardia / Consultorio)</span>
+          <span>3. Triage Individual (Guardia)</span>
         </button>
-        <button id="btnTabDocs" onclick="switchTab('tabDocs')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2">
+        <button id="btnTabDocs" onclick="switchTab('tabDocs')" class="py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2 shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          <span>Arquitectura y Guía Clínica</span>
+          <span>4. Modelos y Guía Clínica</span>
         </button>
       </nav>
     </div>
@@ -75,14 +82,24 @@
       
       <!-- Upload Card -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 class="text-lg font-bold text-slate-900">Subir Dataset de Evaluación (Hold-Out)</h2>
-            <p class="text-sm text-slate-500">Cargue un archivo CSV para validar el rendimiento supervisado de CatBoost y la coherencia de perfiles clínicos con K-Modes.</p>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">Evaluación Supervisada</span>
+              <h2 class="text-lg font-bold text-slate-900">Evaluación de Lotes (Hold-Out con Desenlace Confirmado)</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Valida CatBoost y K-Modes de desarrollo. <strong class="text-indigo-700">Requiere columna Outcome</strong> para calcular ROC, F1, matrices de confusión y pureza.
+            </p>
           </div>
-          <div class="flex items-center space-x-3">
-            <span class="text-xs font-semibold text-slate-600">Modelos a ejecutar:</span>
-            <select id="modelSelector" class="text-xs font-semibold bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-3 py-2 focus:ring-teal-500 focus:border-teal-500">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnLoadHoldoutSample" type="button" class="inline-flex items-center px-3 py-1.5 border border-slate-300 shadow-sm text-xs font-semibold rounded-lg text-slate-700 bg-white hover:bg-slate-50">
+              <svg class="w-3.5 h-3.5 mr-1.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+              Cargar CSV de ejemplo (con Outcome)
+            </button>
+            <div class="flex items-center space-x-2 border-l pl-2 border-slate-200">
+              <span class="text-xs font-semibold text-slate-600">Modelos:</span>
+              <select id="modelSelector" class="text-xs font-semibold bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:ring-teal-500 focus:border-teal-500">
               <option value="both" selected>Ambos (CatBoost + K-Modes)</option>
               <option value="catboost">Solo CatBoost (Supervisado)</option>
               <option value="kmodes">Solo K-Modes (Perfiles Clínicos)</option>
@@ -378,7 +395,170 @@
 
 
     <!-- ========================================== -->
-    <!-- TAB 2: TRIAGE INDIVIDUAL (PACIENTE) -->
+    <!-- TAB 2: CLUSTERS POR SÍNTOMAS (SIN OUTCOME) -->
+    <!-- ========================================== -->
+    <div id="tabSymptoms" class="hidden fade-in space-y-6">
+      
+      <!-- Upload Card -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">K-Modes Solo Síntomas</span>
+              <h2 class="text-lg font-bold text-slate-900">Agrupamiento Fenotípico de Cohortes (Sin Desenlace)</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Ubica a cada paciente en su cluster fenotípico y compara métricas poblacionales (PSI, Silhouette, Hamming) con el baseline de entrenamiento.
+              <strong class="text-teal-700">No requiere la columna Outcome.</strong>
+            </p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="btnLoadSymptomsSample" type="button" class="inline-flex items-center px-3 py-1.5 border border-slate-300 shadow-sm text-xs font-semibold rounded-lg text-slate-700 bg-white hover:bg-slate-50">
+              <svg class="w-3.5 h-3.5 mr-1.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+              Cargar CSV de ejemplo sin desenlace
+            </button>
+          </div>
+        </div>
+
+        <!-- Callout aclaratorio de diferencias -->
+        <div class="bg-teal-50/60 border border-teal-200 rounded-xl p-3.5 text-xs text-teal-950 flex items-start space-x-3">
+          <svg class="w-5 h-5 text-teal-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div>
+            <span class="font-bold">¿Cómo diferenciar este K-Modes del K-Modes de la Pestaña 1?</span>
+            <p class="mt-0.5 text-teal-900 leading-relaxed">
+              <strong>Pestaña 1 (Hold-Out con Outcome):</strong> Diseñado para validación retrospectiva. Requiere saber el diagnóstico (<code class="bg-white/80 px-1 py-0.5 rounded font-mono">Outcome</code>) para medir concordancia clínica y pureza diagnóstica.<br>
+              <strong>Esta Pestaña 2 (Solo Síntomas):</strong> Diseñado para pacientes reales de guardia o consultorio. <strong>No requiere Outcome</strong>. Solo usa los 4 síntomas cardinales (<code class="bg-white/80 px-1 py-0.5 rounded font-mono">Fever, Headache, Myalgia, Rash</code>) para clasificar a cada paciente y verificar si la distribución poblacional se mantiene estable respecto al entrenamiento ($N=1715$).
+            </p>
+          </div>
+        </div>
+
+        <!-- Dropzone for Symptoms CSV -->
+        <div id="dropzoneSymptoms" class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-teal-500 hover:bg-teal-50/30 transition-all cursor-pointer">
+          <input type="file" id="fileInputSymptoms" accept=".csv" class="hidden">
+          <div class="flex flex-col items-center justify-center space-y-2">
+            <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </div>
+            <p class="text-sm font-semibold text-slate-700">Arrastre aquí su archivo CSV de síntomas o <span class="text-teal-600 underline">explore en su equipo</span></p>
+            <p class="text-xs text-slate-400">Columnas mínimas requeridas: <code>Fever, Headache, Myalgia, Rash</code> (cualquier otra columna adicional se preservará).</p>
+            <p id="fileNameDisplaySymptoms" class="text-xs font-bold text-teal-700 hidden mt-2"></p>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button id="btnEvalSymptoms" disabled class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            <span>Clasificar Cohorte y Comparar Métricas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Container for Symptoms -->
+      <div id="symptomsResultsContainer" class="hidden space-y-6">
+        <!-- Top Metrics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <span class="text-xs font-semibold text-slate-500">Muestras Evaluadas</span>
+            <div id="symTotalSamples" class="text-2xl font-black text-slate-900">--</div>
+            <span class="text-[11px] text-slate-400">Pacientes en la cohorte subida</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <span class="text-xs font-semibold text-slate-500">Estabilidad Poblacional (PSI)</span>
+            <div class="flex items-baseline space-x-2">
+              <span id="symPsiVal" class="text-2xl font-black text-slate-900">--</span>
+              <span id="symPsiBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">--</span>
+            </div>
+            <span id="symPsiText" class="text-[11px] text-slate-500 block truncate">Vs. Baseline de entrenamiento</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <span class="text-xs font-semibold text-slate-500">Distancia Hamming (Costo medio)</span>
+            <div class="flex items-baseline space-x-2">
+              <span id="symHammingVal" class="text-2xl font-black text-slate-900">--</span>
+              <span id="symHammingDelta" class="text-xs font-bold text-slate-600">--</span>
+            </div>
+            <span class="text-[11px] text-slate-400">Baseline Train: 0.5259</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <span class="text-xs font-semibold text-slate-500">Silhouette Score (Cohesión)</span>
+            <div id="symSilVal" class="text-2xl font-black text-slate-900">--</div>
+            <span class="text-[11px] text-slate-400">Separación y cohesión de fenotipos</span>
+          </div>
+        </div>
+
+        <!-- Distribution Comparison Table & Chart Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Comparative Table -->
+          <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+              <h3 class="text-sm font-bold text-slate-900">Comparativa de Distribución: Cohorte vs. Baseline de Entrenamiento</h3>
+              <p class="text-xs text-slate-500">Comprueba si la proporción de cada fenotipo clínico en tu cohorte se mantiene o presenta desvío respecto a los 1.715 pacientes de desarrollo.</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-600 font-bold border-b">
+                  <tr>
+                    <th class="p-2.5">Fenotipo / Cluster</th>
+                    <th class="p-2.5 text-center">N Cohorte</th>
+                    <th class="p-2.5 text-center">% Cohorte</th>
+                    <th class="p-2.5 text-center">% Train</th>
+                    <th class="p-2.5 text-center">Diferencia (&Delta;)</th>
+                  </tr>
+                </thead>
+                <tbody id="symDistTableBody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Symptom Prevalence Chart -->
+          <div class="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Prevalencia de Síntomas por Cluster (%)</h3>
+              <p class="text-xs text-slate-500">Frecuencia observada de los 4 síntomas cardinales en cada cluster de tu cohorte.</p>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="symBarChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Centroid Phenotype Cards -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Centroides y Definición de Fenotipos Clínicos (K-Modes)</h3>
+            <p class="text-xs text-slate-500">Comportamiento fenotípico de referencia según combinaciones de síntomas.</p>
+          </div>
+          <div id="symCentroidsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Sample Predictions Preview Table -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Vista Previa de Pacientes con Cluster Asignado</h3>
+              <p class="text-xs text-slate-500">Primeras filas con cluster asignado, perfil clínico legible y distancia al centroide.</p>
+            </div>
+            <a id="btnDownloadSymptomsCsv" href="/export-symptoms-csv" class="inline-flex items-center px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all space-x-2">
+              <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              <span>Descargar CSV con Clusters Asignados</span>
+            </a>
+          </div>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-96">
+            <table class="w-full text-xs text-left">
+              <thead id="symPreviewTableHead" class="bg-slate-50 text-slate-700 font-bold sticky top-0 border-b"></thead>
+              <tbody id="symPreviewTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 3: TRIAGE INDIVIDUAL (PACIENTE) -->
     <!-- ========================================== -->
     <div id="tabSingle" class="hidden fade-in space-y-6">
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -555,21 +735,23 @@
 
     // Tabs navigation
     function switchTab(tabId) {
-      ['tabBatch', 'tabSingle', 'tabDocs'].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
+      ['tabBatch', 'tabSymptoms', 'tabSingle', 'tabDocs'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
       });
-      document.getElementById(tabId).classList.remove('hidden');
+      const activeEl = document.getElementById(tabId);
+      if (activeEl) activeEl.classList.remove('hidden');
 
-      // Update button borders
-      document.getElementById('btnTabBatch').className = (tabId === 'tabBatch') ?
-        'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2' :
-        'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
-      document.getElementById('btnTabSingle').className = (tabId === 'tabSingle') ?
-        'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2' :
-        'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
-      document.getElementById('btnTabDocs').className = (tabId === 'tabDocs') ?
-        'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2' :
-        'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2';
+      const tabs = ['tabBatch', 'tabSymptoms', 'tabSingle', 'tabDocs'];
+      tabs.forEach(t => {
+        const btnId = 'btn' + t.charAt(0).toUpperCase() + t.slice(1);
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.className = (tabId === t) ?
+            'py-3 px-1 border-b-2 border-teal-600 text-teal-700 font-bold flex items-center space-x-2 shrink-0' :
+            'py-3 px-1 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center space-x-2 shrink-0';
+        }
+      });
     }
 
     // Health check on load
@@ -632,6 +814,18 @@
       fileSelectedBar.classList.add('hidden');
       dropzone.classList.remove('hidden');
       hideAlerts();
+    });
+
+    document.getElementById('btnLoadHoldoutSample')?.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/sample/holdout-csv');
+        if (!res.ok) throw new Error("No se pudo cargar la muestra");
+        const blob = await res.blob();
+        const file = new File([blob], 'sample_holdout.csv', { type: 'text/csv' });
+        handleFile(file);
+      } catch (e) {
+        alert("Error cargando muestra: " + e.message);
+      }
     });
 
     function hideAlerts() {
@@ -1073,6 +1267,222 @@
         alert("Error al conectar con la API: " + err.message);
       }
     });
+
+    // ========================================================
+    // TAB SÍNTOMAS (K-MODES SIN OUTCOME) LOGIC
+    // ========================================================
+    let selectedSymptomsFile = null;
+    let symBarChartInstance = null;
+
+    const dropzoneSymptoms = document.getElementById('dropzoneSymptoms');
+    const fileInputSymptoms = document.getElementById('fileInputSymptoms');
+    const fileNameDisplaySymptoms = document.getElementById('fileNameDisplaySymptoms');
+    const btnEvalSymptoms = document.getElementById('btnEvalSymptoms');
+
+    function handleSymptomsFile(file) {
+      if (!file.name.endsWith('.csv')) {
+        alert("Por favor seleccione un archivo con formato .csv");
+        return;
+      }
+      selectedSymptomsFile = file;
+      fileNameDisplaySymptoms.textContent = `Archivo seleccionado: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      fileNameDisplaySymptoms.classList.remove('hidden');
+      btnEvalSymptoms.removeAttribute('disabled');
+    }
+
+    dropzoneSymptoms?.addEventListener('click', () => fileInputSymptoms.click());
+    dropzoneSymptoms?.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneSymptoms.classList.add('border-teal-500', 'bg-teal-50/50'); });
+    dropzoneSymptoms?.addEventListener('dragleave', () => { dropzoneSymptoms.classList.remove('border-teal-500', 'bg-teal-50/50'); });
+    dropzoneSymptoms?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzoneSymptoms.classList.remove('border-teal-500', 'bg-teal-50/50');
+      if (e.dataTransfer.files.length) handleSymptomsFile(e.dataTransfer.files[0]);
+    });
+    fileInputSymptoms?.addEventListener('change', (e) => {
+      if (e.target.files.length) handleSymptomsFile(e.target.files[0]);
+    });
+
+    document.getElementById('btnLoadSymptomsSample')?.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/sample/symptoms-csv');
+        if (!res.ok) throw new Error("No se pudo cargar la muestra");
+        const blob = await res.blob();
+        const file = new File([blob], 'sample_sintomas_sin_outcome.csv', { type: 'text/csv' });
+        handleSymptomsFile(file);
+      } catch (e) {
+        alert("Error cargando muestra: " + e.message);
+      }
+    });
+
+    btnEvalSymptoms?.addEventListener('click', async () => {
+      if (!selectedSymptomsFile) return;
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      document.getElementById('symptomsResultsContainer').classList.add('hidden');
+
+      const formData = new FormData();
+      formData.append('file', selectedSymptomsFile);
+
+      try {
+        const response = await fetch('/evaluate/symptoms-cohort', { method: 'POST', body: formData });
+        const result = await response.json();
+        document.getElementById('loadingOverlay').classList.add('hidden');
+
+        if (!response.ok) {
+          alert("Error: " + (result.detail || (result.errors ? result.errors.join(", ") : "Error en evaluación")));
+          return;
+        }
+
+        renderSymptomsResults(result);
+      } catch (err) {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        alert("Error al conectar con la API: " + err.message);
+      }
+    });
+
+    function renderSymptomsResults(data) {
+      document.getElementById('symptomsResultsContainer').classList.remove('hidden');
+      const km = data.kmodes_sintomas;
+
+      // KPIs
+      document.getElementById('symTotalSamples').textContent = data.n_filas;
+      document.getElementById('symPsiVal').textContent = km.psi_tamanos;
+      const psiBadge = document.getElementById('symPsiBadge');
+      psiBadge.textContent = km.psi_interpretacion;
+      if (km.psi_status === 'normal') {
+        psiBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      } else if (km.psi_status === 'warning') {
+        psiBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+      } else {
+        psiBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800';
+      }
+
+      document.getElementById('symHammingVal').textContent = km.costo_por_obs.uploaded;
+      const deltaEl = document.getElementById('symHammingDelta');
+      const d = km.costo_por_obs.delta;
+      deltaEl.textContent = (d > 0 ? `+${d}` : `${d}`);
+      deltaEl.className = d <= 0.2 ? 'text-xs font-bold text-emerald-600' : 'text-xs font-bold text-amber-600';
+
+      document.getElementById('symSilVal').textContent = km.silhouette.global !== null ? km.silhouette.global : 'N/A';
+
+      // Distribution Table
+      const distTbody = document.getElementById('symDistTableBody');
+      distTbody.innerHTML = '';
+      km.comparativa_distribucion.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+        const deltaColor = Math.abs(row.delta_pct) <= 5 ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-bold';
+        tr.innerHTML = `
+          <td class="p-2.5 font-medium text-slate-800">${row.nombre} <span class="text-slate-400 font-mono text-[11px]">(Cluster ${row.cluster})</span></td>
+          <td class="p-2.5 text-center font-bold text-slate-700">${row.n_subido}</td>
+          <td class="p-2.5 text-center font-bold text-teal-700">${row.pct_subido}%</td>
+          <td class="p-2.5 text-center text-slate-500">${row.pct_base}% (${row.n_base})</td>
+          <td class="p-2.5 text-center ${deltaColor}">${row.delta_pct > 0 ? '+' : ''}${row.delta_pct}%</td>
+        `;
+        distTbody.appendChild(tr);
+      });
+
+      // Bar Chart for symptoms prevalence per cluster
+      renderSymptomsBarChart(km);
+
+      // Centroids Grid
+      const centGrid = document.getElementById('symCentroidsGrid');
+      centGrid.innerHTML = '';
+      km.centroides.forEach(cent => {
+        const cId = cent.cluster.toString();
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3';
+        const v = cent.valores;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full">Cluster ${cent.cluster}</span>
+            <span class="text-xs font-bold text-slate-600">${km.tamano_clusters[cId]?.pct ? (km.tamano_clusters[cId].pct * 100).toFixed(1) : 0}% cohorte</span>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">${cent.nombre}</h4>
+            <p class="text-[11px] text-slate-500 mt-1 italic">${cent.descripcion}</p>
+          </div>
+          <div class="pt-2 border-t border-slate-200 grid grid-cols-4 gap-1 text-[11px] text-center">
+            <div class="p-1 rounded ${v.Fever ? 'bg-teal-200/60 font-bold text-teal-900' : 'bg-slate-200/50 text-slate-500'}">Fiebre: ${v.Fever ? 'Sí' : 'No'}</div>
+            <div class="p-1 rounded ${v.Headache ? 'bg-teal-200/60 font-bold text-teal-900' : 'bg-slate-200/50 text-slate-500'}">Cefalea: ${v.Headache ? 'Sí' : 'No'}</div>
+            <div class="p-1 rounded ${v.Myalgia ? 'bg-teal-200/60 font-bold text-teal-900' : 'bg-slate-200/50 text-slate-500'}">Mialgia: ${v.Myalgia ? 'Sí' : 'No'}</div>
+            <div class="p-1 rounded ${v.Rash ? 'bg-rose-200/60 font-bold text-rose-900' : 'bg-slate-200/50 text-slate-500'}">Rash: ${v.Rash ? 'Sí' : 'No'}</div>
+          </div>
+        `;
+        centGrid.appendChild(card);
+      });
+
+      // Preview Table
+      renderSymptomsPreviewTable(data.sample_predictions);
+    }
+
+    function renderSymptomsBarChart(km) {
+      const ctx = document.getElementById('symBarChart').getContext('2d');
+      if (symBarChartInstance) symBarChartInstance.destroy();
+
+      const labels = ['Fiebre', 'Cefalea', 'Mialgia', 'Exantema (Rash)'];
+      const keys = ['Fever', 'Headache', 'Myalgia', 'Rash'];
+      const colors = ['#64748b', '#0d9488', '#f59e0b'];
+
+      const datasets = km.centroides.map((cent, idx) => {
+        const cId = cent.cluster.toString();
+        const p = km.perfil_por_cluster[cId] || {};
+        return {
+          label: `Cluster ${cent.cluster}: ${cent.nombre.split('(')[0].trim()}`,
+          data: keys.map(k => (p[k] !== undefined ? p[k] * 100 : 0)),
+          backgroundColor: colors[idx % colors.length],
+          borderRadius: 6
+        };
+      });
+
+      symBarChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100, title: { display: true, text: 'Prevalencia (%)', font: { size: 10 } } }
+          },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
+        }
+      });
+    }
+
+    function renderSymptomsPreviewTable(records) {
+      const thead = document.getElementById('symPreviewTableHead');
+      const tbody = document.getElementById('symPreviewTableBody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+      if (!records || !records.length) return;
+
+      const cols = Object.keys(records[0]);
+      const trHead = document.createElement('tr');
+      cols.forEach(c => {
+        const th = document.createElement('th');
+        th.className = 'p-2.5 text-left text-slate-700 text-xs font-bold whitespace-nowrap';
+        th.textContent = c;
+        trHead.appendChild(th);
+      });
+      thead.appendChild(trHead);
+
+      records.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+        cols.forEach(c => {
+          const td = document.createElement('td');
+          td.className = 'p-2 text-slate-800 text-xs whitespace-nowrap';
+          if (c === 'cluster_asignado') {
+            td.innerHTML = `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${r[c] === 2 ? 'bg-amber-100 text-amber-800' : (r[c] === 1 ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-800')}">Cluster ${r[c]}</span>`;
+          } else if (c === 'perfil_clinico') {
+            td.innerHTML = `<span class="font-semibold text-slate-900">${r[c]}</span>`;
+          } else {
+            td.textContent = r[c];
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
   </script>
 </body>
 </html>

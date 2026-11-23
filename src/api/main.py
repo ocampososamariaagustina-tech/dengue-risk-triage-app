@@ -11,18 +11,24 @@ from pathlib import Path
 from src.ml.model_loader import ModelRegistry
 from src.ml.metrics_evaluator import (
     validate_dataframe,
+    validate_symptoms_dataframe,
     evaluate_catboost,
     evaluate_kmodes,
+    evaluate_kmodes_sintomas,
     generate_predictions_table,
+    generate_symptoms_predictions_table,
     FEATURES_CB,
     FEATURES_KM,
+    FEATURES_SINTOMAS,
 )
 from src.api.schemas import PatientInput, SinglePredictionResponse, HealthResponse
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+DEV_DIR = Path(__file__).resolve().parent.parent.parent / "dev"
 
 # Cache para última evaluación generada (para descarga de CSV)
 latest_evaluated_df: Optional[pd.DataFrame] = None
+latest_symptoms_df: Optional[pd.DataFrame] = None
 
 
 @asynccontextmanager
@@ -163,6 +169,112 @@ def export_evaluated_csv():
         iter([stream.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=resultados_evaluacion_dengue.csv"},
+    )
+
+
+@app.post("/evaluate/symptoms-cohort")
+def evaluate_symptoms_cohort(file: UploadFile = File(...)):
+    """
+    Evalúa una cohorte de pacientes sin desenlace (Outcome) usando K-Modes basado exclusivamente en síntomas.
+    Identifica el cluster fenotípico de cada paciente y compara métricas con la línea de base.
+    """
+    global latest_symptoms_df
+    registry = ModelRegistry.get_instance()
+    if not registry.loaded or registry.kmodes_sintomas_model is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El modelo K-Modes de solo síntomas no está cargado en el servidor.",
+        )
+
+    # Leer archivo
+    if hasattr(file, "file") and hasattr(file.file, "read"):
+        content = file.file.read()
+    elif hasattr(file, "read"):
+        content = file.read()
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Archivo no válido.")
+
+    try:
+        df = pd.read_csv(io.BytesIO(content), encoding="utf-8")
+    except UnicodeDecodeError:
+        df = pd.read_csv(io.BytesIO(content), encoding="latin1")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al leer CSV: {str(e)}")
+
+    errors, warnings = validate_symptoms_dataframe(df)
+    if errors:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"status": "error", "errors": errors, "warnings": warnings}
+        )
+
+    km_results = evaluate_kmodes_sintomas(
+        registry.kmodes_sintomas_model, df, registry.metadata
+    )
+
+    enriched_df = generate_symptoms_predictions_table(
+        registry.kmodes_sintomas_model, df, registry.metadata
+    )
+    latest_symptoms_df = enriched_df
+
+    preview_cols = [c for c in enriched_df.columns if c not in ["source", "Gender"]]
+    return {
+        "status": "ok",
+        "n_filas": len(df),
+        "warnings": warnings,
+        "kmodes_sintomas": km_results,
+        "sample_predictions": enriched_df[preview_cols].head(30).to_dict(orient="records")
+    }
+
+
+@app.get("/export-symptoms-csv")
+def export_symptoms_csv():
+    """Descarga el último dataset de síntomas evaluado con los clusters fenotípicos asignados."""
+    global latest_symptoms_df
+    if latest_symptoms_df is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hay datos de cohortes de síntomas evaluados recientemente para descargar.",
+        )
+
+    stream = io.StringIO()
+    latest_symptoms_df.to_csv(stream, index=False, encoding="utf-8")
+    stream.seek(0)
+
+    return StreamingResponse(
+        iter([stream.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=pacientes_clusters_sintomas.csv"},
+    )
+
+
+@app.get("/sample/symptoms-csv")
+def get_sample_symptoms_csv():
+    """Descarga el dataset de prueba de síntomas sin Outcome."""
+    sample_path = DEV_DIR / "sample_sintomas_sin_outcome.csv"
+    if not sample_path.exists():
+        raise HTTPException(status_code=404, detail="Archivo de ejemplo no encontrado.")
+    with open(sample_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return StreamingResponse(
+        iter([content]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sample_sintomas_sin_outcome.csv"},
+    )
+
+
+@app.get("/sample/holdout-csv")
+def get_sample_holdout_csv():
+    """Descarga el dataset de prueba hold-out con Outcome."""
+    sample_path = DEV_DIR / "sample_holdout.csv"
+    if not sample_path.exists():
+        raise HTTPException(status_code=404, detail="Archivo de ejemplo no encontrado.")
+    with open(sample_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return StreamingResponse(
+        iter([content]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sample_holdout.csv"},
     )
 
 

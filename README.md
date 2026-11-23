@@ -6,17 +6,24 @@ Herramienta de **evaluación analítica y apoyo a la decisión clínica** para d
 
 ## Características Principales
 
-1. **Evaluación de Lotes (Hold-Out / CSV):**
-   - Carga de datasets de validación (ej. `validacion_produccion.csv`).
+1. **Evaluación de Lotes Hold-Out (Supervisada / Con Outcome):**
+   - Carga de datasets de validación (ej. `sample_holdout.csv`).
    - Inferencia en memoria con **CatBoost** (6 predictores clínicos, umbral óptimo ~0.5602).
    - Generación de matriz de confusión gráfica, curvas ROC y Precision-Recall interactivas, e Intervalos de Confianza al 95% por Bootstrap (1000 remuestreos).
-   - Agrupamiento no supervisado con **K-Modes** (3 clusters descriptivos), índice de estabilidad poblacional (PSI), distancias Hamming y coeficientes Silhouette.
-   - Exportación de CSV enriquecido con probabilidades, predicciones y nombres de perfil asignados.
+   - Agrupamiento con **K-Modes (con Outcome)** para evaluar la correspondencia de perfiles y pureza diagnóstica.
+   - Exportación de CSV enriquecido con probabilidades y predicciones.
 
-2. **Triage Clínico Individual:**
-   - Formulario de guardia/consultorio para estimar probabilidad pre-test de dengue con CatBoost.
-   - **Clasificación fenotípica inmediata con K-Modes (Solo Síntomas):** permite, dado un paciente, ubicarlo en uno de los 3 clusters descriptivos a partir de sus 4 síntomas cardinales (`Fever`, `Headache`, `Myalgia`, `Rash`), sin requerir `Outcome` ni pruebas de laboratorio previas.
-   - Conducta y laboratorio racional según probabilidad y ventana epidemiológica (Safe Triage: no sobrecargar con NS1/PCR en baja probabilidad pre-test por bajo VPP; priorizar métodos directos/indirectos en alta probabilidad).
+2. **Clustering Fenotípico de Cohortes (No Supervisada / Sin Outcome):**
+   - Carga de datasets de pacientes sin diagnóstico confirmado (ej. `sample_sintomas_sin_outcome.csv`).
+   - **No requiere columna Outcome**: utiliza exclusivamente los 4 síntomas cardinales (`Fever`, `Headache`, `Myalgia`, `Rash`).
+   - Clasificación y ubicación de cada paciente en su cluster fenotípico.
+   - Comparación de métricas poblacionales contra la línea de base ($N=1.715$): Índice de Estabilidad Poblacional (PSI), distancia Hamming promedio (costo por observación), coeficientes Silhouette y gráfico de prevalencia de síntomas.
+   - Exportación de CSV con columnas `cluster_asignado`, `perfil_clinico` y `distancia_centroide`.
+
+3. **Triage Clínico Individual (Guardia / Consultorio):**
+   - Formulario paciente por paciente para estimar probabilidad pre-test con CatBoost.
+   - Ubicación fenotípica inmediata con K-Modes Solo Síntomas (Cluster 0: oligosintomático, Cluster 1: típico sin rash, Cluster 2: completo con rash).
+   - Conducta y laboratorio racional según probabilidad pre-test (Safe Triage: no sobrecargar con NS1/PCR en probabilidad baja por bajo VPP; priorizar métodos directos/indirectos en alta probabilidad).
 
 ---
 
