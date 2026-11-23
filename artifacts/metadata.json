@@ -1,0 +1,74 @@
+{
+  "project": "Dengue Risk Triage - TFI",
+  "version": "1.0.0",
+  "models": {
+    "catboost": {
+      "name": "CatBoost Classifier with Tuned Threshold",
+      "artifact_file": "modelo_catboost.joblib",
+      "fallback_artifact_file": "catboost_dengue.joblib",
+      "estimator_type": "TunedThresholdClassifierCV",
+      "best_threshold": 0.560219014101161,
+      "features": [
+        "Fever_Duration",
+        "Age",
+        "Headache",
+        "Myalgia",
+        "Rash",
+        "Fever"
+      ],
+      "best_params": {
+        "estimator__depth": 5,
+        "estimator__iterations": 300,
+        "estimator__l2_leaf_reg": 1,
+        "estimator__learning_rate": 0.01,
+        "estimator__subsample": 0.8
+      },
+      "cv_metrics": {
+        "f1": {"mean": 0.9146, "std": 0.0149},
+        "f2": {"mean": 0.9371, "std": 0.0139},
+        "recall": {"mean": 0.9528, "std": 0.0149},
+        "precision": {"mean": 0.8795, "std": 0.0201}
+      },
+      "test_metrics": {
+        "roc_auc": 0.951035,
+        "accuracy": 0.9068,
+        "f1": 0.9248,
+        "recall": 0.9425,
+        "precision": 0.9077
+      }
+    },
+    "kmodes": {
+      "name": "K-Modes Clustering (Interpretability)",
+      "artifact_file": "modelo_kmodes.joblib",
+      "fallback_artifact_file": "kmodes_dengue.joblib",
+      "n_clusters": 3,
+      "features": [
+        "Fever",
+        "Headache",
+        "Myalgia",
+        "Rash",
+        "Outcome"
+      ],
+      "train_stats": {
+        "n_train": 1715,
+        "cost_total": 1079.0,
+        "cost_per_obs": 0.62915,
+        "cluster_distribution": {
+          "0": {"count": 622, "pct": 0.3627},
+          "1": {"count": 440, "pct": 0.2566},
+          "2": {"count": 653, "pct": 0.3808}
+        }
+      },
+      "centroids": [
+        {"cluster": 0, "Fever": 0, "Headache": 0, "Myalgia": 0, "Rash": 0, "Outcome": 0},
+        {"cluster": 1, "Fever": 1, "Headache": 1, "Myalgia": 1, "Rash": 0, "Outcome": 1},
+        {"cluster": 2, "Fever": 1, "Headache": 1, "Myalgia": 1, "Rash": 1, "Outcome": 1}
+      ],
+      "cluster_names": {
+        "0": "Perfil sin cuadro clínico / asintomático",
+        "1": "Perfil dengue típico (síntomas cardinales sin exantema)",
+        "2": "Perfil dengue completo (síntomas cardinales con exantema)"
+      }
+    }
+  }
+}

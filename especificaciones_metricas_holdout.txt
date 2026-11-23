@@ -1,0 +1,554 @@
+================================================================================
+ESPECIFICACIONES: MÉTRICAS EN PRODUCCIÓN SOBRE EL HOLD-OUT
+Proyecto TFI - Predicción de dengue (CatBoost + KModes)
+Basado en: TFI_PROYECTO_v4.ipynb
+================================================================================
+
+--------------------------------------------------------------------------------
+0. RESUMEN (leer primero)
+--------------------------------------------------------------------------------
+
+- Se sube UN solo CSV con las columnas de entrada MÁS la columna "Outcome" (la y
+  verdadera). No hace falta un segundo archivo. La API separa X e y.
+  (Alternativa válida: dos archivos X.csv + y.csv con el mismo orden de filas,
+  pero es más propenso a errores. Se recomienda un solo CSV.)
+
+- Se despliegan solo dos modelos, ya entrenados y exportados tal como quedaron
+  en el notebook. NO se reentrenan ni se modifican:
+
+  1) CatBoost = modelo PREDICTIVO (supervisado).
+     Es la última variante del notebook: GridSearchCV + TunedThresholdClassifierCV
+     (hiperparámetros y umbral tuneados por CV). Predice Outcome (dengue / no
+     dengue) a partir de 6 features. Se mide con métricas de clasificación:
+     accuracy, precision, recall, F1, F2, ROC AUC, matriz de confusión, etc.
+
+  2) KModes = modelo de INTERPRETABILIDAD (no supervisado, descriptivo).
+     Su función NO es predecir dengue sino agrupar a los pacientes en perfiles
+     clínicos (combinaciones de síntomas + resultado) para poder explicar,
+     en lenguaje simple, qué tipos de paciente aparecen en los datos.
+     Por diseño usa Outcome como una de sus variables, de modo que cada cluster
+     describe un perfil completo del tipo "estos síntomas y este diagnóstico".
+     Por eso corre sobre el CSV con Outcome (el mismo que usa CatBoost para
+     medirse). Como no hay una "respuesta correcta" de cluster, NO se evalúa
+     con accuracy: se evalúa qué tan bien agrupa y qué tan estables e
+     interpretables son los perfiles sobre datos nuevos (sección 8).
+
+- Resumen de roles:
+
+                    CatBoost                    KModes
+  Tipo              Supervisado                 No supervisado
+  Para qué sirve    Predecir dengue             Explicar perfiles de pacientes
+  Usa Outcome como  Variable a predecir (y)     Una variable más del agrupamiento
+  Se mide con       Métricas de clasificación   Métricas de clustering + perfiles
+  Features          Fever_Duration, Age,        Fever, Headache, Myalgia,
+                    Headache, Myalgia, Rash,    Rash, Outcome
+                    Fever
+
+
+--------------------------------------------------------------------------------
+1. CONTEXTO (extraído del notebook)
+--------------------------------------------------------------------------------
+
+Dataset: dataset_combinado.csv (unión de dataset2026 y Dengue_clinical_dataset2025).
+Variable objetivo: Outcome (1 = dengue / Positive, 0 = no dengue / Negative).
+
+Preprocesamiento previo al split (celdas de mapeo):
+  Outcome : {'Negative':0, 'Positive':1, '0':0, '1':1}
+  Gender  : {'Male':0, 'Female':1}
+  Fever   : {False:0, True:1}
+
+Split:
+  - 15% aislado como validación tipo producción -> validacion_produccion.csv
+    (train_test_split, test_size=0.15, random_state=42, stratify=Outcome)
+  - 85% restante -> dataset_preprocesado.csv, usado para EDA, entrenamiento y CV.
+
+IMPORTANTE: validacion_produccion.csv se guardó DESPUÉS de los mapeos, por lo
+tanto ya viene codificado en 0/1 (Outcome, Gender, Fever). Ese es el formato
+"canónico" que debe esperar la API. Verificar con:
+      df_validacion_prod.dtypes
+para confirmar que Headache, Myalgia y Rash también son numéricas 0/1.
+
+El hold-out nunca debe usarse para entrenar, tunear hiperparámetros ni elegir
+umbral. Solo se usa para medir.
+
+
+--------------------------------------------------------------------------------
+2. ARTEFACTOS A EXPORTAR (.joblib)
+--------------------------------------------------------------------------------
+
+Archivo 1: catboost_dengue.joblib
+  Contenido: modelo.best_estimator_  (TunedThresholdClassifierCV que envuelve
+  a CatBoostClassifier, ya reajustado con todo X_train).
+  El umbral óptimo queda dentro del objeto: modelo.best_estimator_.best_threshold_
+  -> model.predict() ya aplica ese umbral; model.predict_proba() devuelve
+     la probabilidad cruda.
+  NO lleva scaler: CatBoost se entrenó con X sin escalar (no usa el
+  "preprocesador" de los otros modelos). La API NO debe escalar nada.
+
+Archivo 2: kmodes_dengue.joblib
+  Contenido: modelKmode (KModes n_clusters=3, init="random", n_init=5,
+  random_state=42), entrenado con df_dengue[binarias].
+
+Archivo 3 (recomendado): metadata.json  con:
+  - features_catboost (lista ordenada) y features_kmodes (lista ordenada)
+  - umbral de CatBoost (best_threshold_)
+  - rangos min/max de Age y Fever_Duration en train (para avisos de rango)
+  - métricas de referencia de desarrollo (CV y test) para comparar
+  - baseline de KModes: n_train, cost_/n_train, silhouette en train,
+    proporción de cada cluster en train, centroides
+  - versiones de librerías (ver sección 11)
+
+Código de exportación:
+
+    import joblib, json
+    joblib.dump(modelo_catboost.best_estimator_, "catboost_dengue.joblib")
+    joblib.dump(modelKmode, "kmodes_dengue.joblib")
+
+(Usar compress=3 si el archivo pesa mucho.)
+
+
+--------------------------------------------------------------------------------
+3. FLUJO GENERAL
+--------------------------------------------------------------------------------
+
+  Página web                     API                              Modelos
+  ----------                     ---                              -------
+  El usuario sube      ->   POST /evaluate               ->   joblib.load (una vez
+  validacion_produccion.csv  (multipart: file, model)          al iniciar la API)
+                             1. Lee CSV (pandas)
+                             2. Valida columnas/tipos/valores
+                             3. Arma X_catboost y X_kmodes
+                             4. predict / predict_proba / predict
+                             5. Calcula métricas contra Outcome
+                        <-   Devuelve JSON con métricas
+  Muestra métricas,
+  matriz de confusión y
+  curvas en la página.
+
+Parámetro "model": catboost | kmodes | both  (default: both).
+CatBoost = predicción y rendimiento. KModes = interpretación de perfiles.
+Los modelos se cargan UNA vez al arrancar el servidor, no en cada request.
+La API NO debe permitir cambiar el umbral desde la página (sería tunear sobre
+el hold-out).
+
+
+--------------------------------------------------------------------------------
+4. FORMATO DEL CSV DE ENTRADA
+--------------------------------------------------------------------------------
+
+Reglas de archivo:
+  - Extensión .csv, codificación UTF-8, separador coma (","), punto decimal.
+  - Primera fila = encabezado. Nombres de columna EXACTOS (distinguen
+    mayúsculas/minúsculas, sin espacios): Fever_Duration, Age, etc.
+  - Sin columna de índice (guardar con index=False).
+  - Una fila = un paciente. Sin filas vacías ni filas de totales.
+  - Sin valores nulos en las columnas requeridas.
+  - Tamaño sugerido máximo: 5 MB.
+
+Columnas:
+
+  Columna          Tipo     Valores válidos               Req. CatBoost  Req. KModes
+  ---------------  -------  ----------------------------  -------------  -----------
+  Fever_Duration   numérica >= 0 (días), entero o float    SÍ             no
+  Age              numérica > 0 (años), entero o float     SÍ             no
+  Headache         entero   0 = no, 1 = sí                 SÍ             no
+  Myalgia          entero   0 = no, 1 = sí                 SÍ             no
+  Rash             entero   0 = no, 1 = sí                 SÍ             no
+  Fever            entero   0 = no, 1 = sí                 SÍ             SÍ (*)
+  Outcome          entero   0 = no dengue, 1 = dengue      SÍ (es la y)   SÍ (feature)
+  Gender           entero   0 = Male, 1 = Female           opcional       no
+  source           texto    "2025" / "2026"                opcional       no
+  Platelet_Count   numérica                                opcional       no
+  WBC_Count        numérica                                opcional       no
+
+  (*) KModes usa además Headache, Myalgia, Rash y Outcome (ver sección 8).
+      En la práctica: KModes usa Fever, Headache, Myalgia, Rash, Outcome.
+
+Las columnas "opcionales" (Gender, source, Platelet_Count, WBC_Count) los
+modelos las IGNORAN. Se aceptan para poder calcular métricas por subgrupo
+(Gender, source). Cualquier otra columna extra se ignora sin error.
+
+ORDEN DE COLUMNAS DE CADA MODELO (la API debe reordenar por nombre, nunca por
+posición, porque el orden del CSV puede variar):
+
+  CatBoost : ['Fever_Duration','Age','Headache','Myalgia','Rash','Fever']
+  KModes   : ['Fever','Headache','Myalgia','Rash','Outcome']
+
+  Son órdenes DISTINTOS. Hacer siempre:
+      X_cb = df[FEATURES_CB]        # selección por nombre -> orden garantizado
+      X_km = df[FEATURES_KM]
+
+Ejemplo de CSV válido (las filas son ilustrativas):
+
+  Gender,Age,Fever_Duration,Platelet_Count,WBC_Count,Headache,Myalgia,Rash,Outcome,Fever,source
+  1,34,4,120000,4500,1,1,0,1,1,2026
+  0,22,2,250000,7200,0,0,0,0,1,2025
+  1,57,5,98000,3900,1,1,1,1,1,2026
+
+Normalización opcional (si querés permitir CSV "crudos" desde la web), usando
+los mismos mapeos del notebook:
+  Outcome: Negative/0 -> 0 ; Positive/1 -> 1
+  Gender : Male -> 0 ; Female -> 1
+  Fever  : False -> 0 ; True -> 1
+Si no se implementa, la API debe rechazar cualquier valor fuera de 0/1.
+
+
+--------------------------------------------------------------------------------
+5. VALIDACIONES QUE DEBE HACER LA API (antes de predecir)
+--------------------------------------------------------------------------------
+
+Errores (devolver HTTP 400 con mensaje claro y las filas/columnas afectadas):
+  1. Faltan columnas requeridas (listarlas).
+  2. Encabezados duplicados.
+  3. Valores nulos en columnas requeridas (indicar índices de fila).
+  4. Binarias (Headache, Myalgia, Rash, Fever, Outcome) con valores fuera de {0,1}.
+  5. Age <= 0 o Fever_Duration < 0, o valores no numéricos.
+  6. Menos de N filas (sugerido N = 30).
+
+Advertencias (procesar igual y devolver en el campo "warnings"):
+  - Age o Fever_Duration fuera del rango min/max visto en train.
+  - Outcome con una sola clase (ROC AUC, PR AUC y specificity/recall quedan
+    indefinidos -> devolver null en esas métricas y avisar).
+  - Proporción de positivos muy distinta a la de desarrollo (en dev el hold-out
+    se hizo estratificado, así que debería ser parecida).
+  - Filas duplicadas dentro del CSV.
+  - Subgrupo con menos de 30 filas (no calcular métricas por subgrupo).
+
+
+--------------------------------------------------------------------------------
+6. PREDICCIÓN CATBOOST
+--------------------------------------------------------------------------------
+
+    X = df[["Fever_Duration","Age","Headache","Myalgia","Rash","Fever"]]
+    y = df["Outcome"].astype(int)
+
+    proba = modelo_cb.predict_proba(X)[:, 1]   # P(dengue)
+    pred  = modelo_cb.predict(X)               # etiqueta con umbral tuneado
+
+Clase positiva = 1 (Dengue). Todas las métricas de precision/recall/F1/F2 se
+calculan respecto de la clase 1, como en el notebook.
+ROC AUC y PR AUC se calculan con "proba", NUNCA con "pred".
+
+
+--------------------------------------------------------------------------------
+7. MÉTRICAS DE CATBOOST (supervisado)
+--------------------------------------------------------------------------------
+
+Matriz de confusión (labels=[0,1]):
+    TN  FP
+    FN  TP
+  confusion_matrix(y, pred, labels=[0,1]).ravel() -> tn, fp, fn, tp
+
+Métricas principales (las mismas del notebook: accuracy, error, precision,
+recall, F1, F2, ROC AUC):
+
+  Métrica               Fórmula / función                          Nota
+  --------------------  -----------------------------------------  -----------------------
+  Accuracy              (TP+TN)/(TP+TN+FP+FN)                      accuracy_score
+  Tasa de error         1 - Accuracy                               como en el notebook
+  Precision (clase 1)   TP/(TP+FP)                                 precision_score
+  Recall / Sensibilidad TP/(TP+FN)                                 recall_score. Clave
+                        (clase 1)                                  clínicamente: FN = caso
+                                                                   de dengue no detectado
+  Especificidad         TN/(TN+FP)                                 recall de la clase 0
+  F1                    2*P*R/(P+R)                                f1_score (métrica con la
+                                                                   que se tuneó el umbral)
+  F2                    fbeta_score(beta=2)                        pondera más el recall
+                                                                   (usada en el scoring CV)
+  ROC AUC               roc_auc_score(y, proba)                    con probabilidades
+  Umbral usado          model.best_threshold_                      informativo
+
+Métricas complementarias (recomendadas):
+  - Valor predictivo negativo (NPV) = TN/(TN+FN)
+  - Balanced accuracy               = (Recall + Especificidad)/2
+  - PR AUC (average_precision_score(y, proba))
+  - MCC (matthews_corrcoef)
+  - Brier score (brier_score_loss(y, proba))  -> calidad de las probabilidades
+  - Reporte por clase: classification_report(y, pred, digits=4, output_dict=True)
+    (precision, recall, f1 y support para clase 0 y 1, macro y weighted avg)
+  - Soporte: n total, n positivos, n negativos, % positivos.
+
+Curvas (para graficar en la web):
+  - ROC: roc_curve(y, proba) -> fpr, tpr (+ AUC)
+  - Precision-Recall: precision_recall_curve(y, proba)
+  - Calibración (opcional): calibration_curve(y, proba, n_bins=10)
+  - Matriz de confusión (como en el notebook, etiquetas "No Dengue (0)" y
+    "Dengue (1)").
+
+Intervalos de confianza (muy recomendado porque el hold-out es chico, del
+orden de unos pocos cientos de filas):
+  - Bootstrap con 1000 remuestreos estratificados de las filas, IC 95% (percentiles
+    2.5 y 97.5) para Recall, Precision, F1, F2 y ROC AUC. Usar semilla fija.
+
+Métricas por subgrupo (si existen las columnas, y n >= 30 por subgrupo):
+  - Por source (2025 vs 2026): motivo -> Fever se definió distinto en cada fuente
+    (en 2026 es Body_Temperature > 38; en 2025 viene directa).
+  - Por Gender.
+  Reportar al menos Recall, Precision, F1, ROC AUC y n de cada subgrupo.
+
+Comparación contra desarrollo:
+  Guardar en metadata.json las métricas de CV (media ± desvío) y de test del
+  notebook, y devolver "delta = hold-out - referencia" para F1, Recall,
+  Precision y ROC AUC. Una caída fuerte en el hold-out indica sobreajuste o
+  diferencia entre poblaciones.
+
+
+--------------------------------------------------------------------------------
+8. KMODES: INTERPRETABILIDAD Y MÉTRICAS DE AGRUPAMIENTO
+--------------------------------------------------------------------------------
+
+8.1 QUÉ ES Y PARA QUÉ SE USA
+
+KModes agrupa pacientes por similitud en variables binarias, asignando a cada uno
+al cluster cuyo "centroide" (la combinación más frecuente de valores, o moda) se
+le parece más. En este proyecto se usa para INTERPRETAR, no para predecir:
+responde preguntas del tipo "¿qué perfiles de paciente existen y qué proporción
+de cada perfil tiene dengue?".
+
+Variables del clustering (orden fijo):
+    FEATURES_KM = ["Fever", "Headache", "Myalgia", "Rash", "Outcome"]
+Outcome está incluida a propósito: cada cluster es un perfil de síntomas MÁS
+diagnóstico. Consecuencias que hay que explicar en la página:
+  - KModes se ejecuta solo cuando el CSV trae Outcome (no se usa para diagnosticar
+    a un paciente nuevo sin diagnóstico; para eso está CatBoost).
+  - Que un cluster tenga mayoría de dengue NO significa que KModes "acierte":
+    como Outcome es parte del agrupamiento, esa coincidencia es esperable por
+    construcción. Sirve para describir, no para medir capacidad predictiva.
+
+Modelo exportado: KModes(n_clusters=3, init="random", n_init=5, random_state=42),
+entrenado con el 85% de desarrollo (df_dengue[binarias]). Se usa tal cual.
+
+
+8.2 CÓMO LEER LOS 3 CLUSTERS (según el notebook)
+
+  Cluster (descripción del notebook)                       Lectura
+  -------------------------------------------------------  ------------------------
+  "Personas sin ningún síntoma y sin dengue"               Perfil sano / sin cuadro
+  "Personas con mayoría de síntomas y con dengue"          Perfil dengue típico
+  "Personas con todos los síntomas y con dengue"           Perfil dengue completo
+
+  IMPORTANTE: en el notebook los clusters se nombran 1, 2, 3 pero el modelo
+  los numera 0, 1, 2. Antes de publicar la página, imprimir
+      pd.DataFrame(modelo_km.cluster_centroids_, columns=FEATURES_KM)
+  y fijar la correspondencia número -> nombre en metadata.json, por ejemplo:
+      "nombres_cluster": {"0": "...", "1": "...", "2": "..."}
+  Esa correspondencia es válida solo para ESTE .joblib (como no se reentrena,
+  queda fija). La API debe devolver siempre el nombre junto al número.
+
+  Para mostrar cada centroide en lenguaje natural, generar una frase a partir de
+  los valores del centroide, por ejemplo:
+      "Fiebre: sí | Dolor de cabeza: no | Mialgia: sí | Rash: no | Dengue: sí"
+  (1 -> "sí", 0 -> "no"). Mostrar la tabla de centroides en la página.
+
+
+8.3 ASIGNACIÓN DE CLUSTER
+
+    Xk = df[FEATURES_KM].astype(int).values
+    labels = modelo_km.predict(Xk)          # 0, 1 o 2 por paciente
+
+Las 5 columnas deben ser enteros 0/1 sin nulos (ver secciones 4 y 5).
+
+
+8.4 MÉTRICAS A CALCULAR SOBRE EL HOLD-OUT
+
+No existe "accuracy" para KModes. Se calculan estas métricas, cada una con su
+lectura:
+
+  1. TAMAÑO DE CADA CLUSTER (n y %) y comparación con el % en train.
+       PSI = suma( (p_hold - p_train) * ln(p_hold / p_train) )
+       (usar epsilon, p.ej. 1e-6, para evitar log(0))
+     Lectura: < 0.10 estable ; 0.10-0.25 cambio moderado ; > 0.25 cambio
+     importante. Responde: "¿los perfiles aparecen con la misma frecuencia en
+     datos nuevos que en los de entrenamiento?"
+
+  2. DISTANCIA PROMEDIO AL CENTROIDE ASIGNADO (costo por observación):
+       cent = np.asarray(modelo_km.cluster_centroids_).astype(int)
+       dist = (Xk != cent[labels]).sum(axis=1)   # cuántas variables difieren
+       costo_hold  = dist.mean()
+       costo_train = modelo_km.cost_ / n_train    (guardar en metadata.json)
+     Rango: 0 (todos idénticos a su centroide) a 5 (difieren en todo).
+     Lectura: cuanto más bajo, más "compacto" el cluster. Si en hold-out es
+     claramente mayor que en train, los pacientes nuevos encajan peor en los
+     perfiles aprendidos.
+
+  3. SILHOUETTE con distancia de Hamming (la misma del notebook):
+       silhouette_score(Xk, labels, metric="hamming")
+       silhouette_samples(...) -> promedio por cluster
+     Rango -1 a 1. Referencia del notebook: > 0.7 estructura fuerte ;
+     0.5-0.7 razonable ; 0.25-0.5 débil ; < 0.25 sin estructura.
+     Lectura: qué tan separados están los perfiles entre sí. Comparar contra la
+     silhouette de train guardada en metadata.json. Requiere al menos 2 clusters
+     presentes y menos clusters que filas; si no, devolver null con aviso.
+
+  4. PERFIL DE CADA CLUSTER EN HOLD-OUT (lo más importante para interpretar):
+       - Proporción de 1s de cada variable (Fever, Headache, Myalgia, Rash,
+         Outcome) dentro de cada cluster = las barras apiladas del notebook.
+       - Moda por cluster, para verificar que coincide con el centroide del
+         modelo (si coincide, el perfil se mantiene en datos nuevos).
+       - % de dengue (Outcome = 1) en cada cluster.
+
+  5. COINCIDENCIA CLUSTER vs DIAGNÓSTICO (descriptiva):
+       - Pureza = suma(máx. conteo de clase por cluster) / n
+       - NMI (normalized_mutual_info_score) y ARI (adjusted_rand_score)
+         entre labels y Outcome.
+     Lectura: cuánto de la división en clusters se alinea con el diagnóstico.
+     Es esperable que den altos porque Outcome es parte del agrupamiento
+     (ver 8.1). Mostrarlas como información descriptiva, con una nota que lo
+     aclare, y NO como medida de rendimiento predictivo.
+
+  6. DISTRIBUCIÓN DE CLUSTERS POR SUBGRUPO (source, Gender) si esas columnas
+     están presentes y hay n >= 30 por subgrupo.
+
+
+8.5 CÓMO PRESENTARLO EN LA PÁGINA
+
+  - Tabla de clusters: nombre, n, %, % de dengue, frase del centroide.
+  - Barras apiladas de proporción de cada variable por cluster.
+  - Semáforo simple de estabilidad (PSI, costo y silhouette vs train).
+  - Texto fijo visible: "KModes es una herramienta descriptiva para entender
+    perfiles de pacientes. No predice dengue; para predicción ver CatBoost."
+
+
+--------------------------------------------------------------------------------
+9. SALIDA JSON SUGERIDA
+--------------------------------------------------------------------------------
+
+{
+  "n_filas": 0,
+  "warnings": [],
+  "catboost": {
+    "umbral": 0.0,
+    "confusion_matrix": {"tn": 0, "fp": 0, "fn": 0, "tp": 0},
+    "accuracy": 0.0, "error_rate": 0.0,
+    "precision": 0.0, "recall": 0.0, "specificity": 0.0, "npv": 0.0,
+    "f1": 0.0, "f2": 0.0, "balanced_accuracy": 0.0, "mcc": 0.0,
+    "roc_auc": 0.0, "pr_auc": 0.0, "brier": 0.0,
+    "support": {"n": 0, "pos": 0, "neg": 0, "pct_pos": 0.0},
+    "classification_report": {},
+    "ic95": {"recall": [0.0, 0.0], "precision": [0.0, 0.0],
+             "f1": [0.0, 0.0], "f2": [0.0, 0.0], "roc_auc": [0.0, 0.0]},
+    "vs_desarrollo": {"f1": 0.0, "recall": 0.0, "precision": 0.0, "roc_auc": 0.0},
+    "curvas": {"roc": {"fpr": [], "tpr": []}, "pr": {"precision": [], "recall": []}},
+    "por_subgrupo": {"source": {}, "Gender": {}}
+  },
+  "kmodes": {
+    "tamano_clusters": {"0": {"n": 0, "pct": 0.0}},
+    "psi_tamanos": 0.0,
+    "costo_por_obs": {"holdout": 0.0, "train": 0.0},
+    "silhouette": {"global": 0.0, "por_cluster": {"0": 0.0}, "train": 0.0},
+    "centroides": [],
+    "perfil_por_cluster": {},
+    "nombres_cluster": {"0": "", "1": "", "2": ""},
+    "coincidencia_con_outcome": {"pct_dengue_por_cluster": {}, "pureza": 0.0, "nmi": 0.0, "ari": 0.0,
+                                 "nota": "descriptiva: Outcome es feature del clustering"}
+  }
+}
+
+Opcional: devolver también la predicción fila a fila (índice, proba, pred,
+cluster) para que la página permita descargar un CSV de resultados.
+
+
+--------------------------------------------------------------------------------
+10. RIESGOS Y BUENAS PRÁCTICAS
+--------------------------------------------------------------------------------
+
+  1. No tunear con el hold-out: ni umbral, ni hiperparámetros, ni selección de
+     variables. Si se reentrena, hacerlo solo con el 85% de desarrollo.
+  2. Duplicados entre desarrollo y hold-out: el dataset tiene pocas variables y
+     varias binarias, así que es probable que existan filas idénticas en ambos
+     conjuntos (df_dengue.duplicated().sum() ya se mira en el notebook). Eso
+     puede inflar las métricas del hold-out. Verificar cuántas filas del
+     hold-out aparecen exactamente en el conjunto de desarrollo.
+  3. Hold-out chico -> métricas ruidosas. Por eso los IC por bootstrap.
+  4. Fever tiene definiciones distintas según la fuente (source). Mirar las
+     métricas por source antes de concluir que el modelo generaliza.
+  5. Datos con Platelet_Count y WBC_Count: están en el CSV pero NO los usa
+     ningún modelo desplegado (en el notebook quedaron comentadas en
+     'numericas'). No exigirlos.
+  6. Si la clase positiva es "no detectar dengue = grave", priorizar Recall y F2
+     por sobre Accuracy en la lectura de resultados.
+  7. KModes es descriptivo: no presentar sus resultados como rendimiento
+     predictivo ni compararlos contra CatBoost.
+  8. Registrar (log) cada evaluación: fecha, nombre de archivo, hash del CSV,
+     versión del modelo y métricas, para trazabilidad.
+
+
+--------------------------------------------------------------------------------
+11. DEPENDENCIAS (fijar versiones iguales a las del entrenamiento)
+--------------------------------------------------------------------------------
+
+  python, pandas, numpy, scikit-learn (>= 1.5: TunedThresholdClassifierCV),
+  catboost, kmodes, joblib, scipy, FastAPI/Flask + uvicorn/gunicorn (la API),
+  python-multipart (subida de archivos en FastAPI).
+
+  El .joblib solo se carga correctamente con las MISMAS versiones de
+  scikit-learn, catboost y kmodes con que se guardó. Ejecutar en Colab:
+      import sklearn, catboost, kmodes, joblib, pandas, numpy
+      print(sklearn.__version__, catboost.__version__, kmodes.__version__,
+            joblib.__version__, pandas.__version__, numpy.__version__)
+  y copiar esas versiones a requirements.txt y a metadata.json.
+
+  Seguridad: joblib usa pickle. Cargar únicamente archivos .joblib propios.
+
+
+--------------------------------------------------------------------------------
+12. CÓDIGO DE REFERENCIA (núcleo de cálculo)
+--------------------------------------------------------------------------------
+
+import numpy as np, pandas as pd
+from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score,
+    recall_score, f1_score, fbeta_score, roc_auc_score, average_precision_score,
+    matthews_corrcoef, brier_score_loss, balanced_accuracy_score,
+    classification_report, silhouette_score, silhouette_samples,
+    normalized_mutual_info_score, adjusted_rand_score)
+
+FEATURES_CB = ["Fever_Duration","Age","Headache","Myalgia","Rash","Fever"]
+FEATURES_KM = ["Fever","Headache","Myalgia","Rash","Outcome"]
+
+def metricas_catboost(model, df):
+    X, y = df[FEATURES_CB], df["Outcome"].astype(int)
+    proba = model.predict_proba(X)[:, 1]
+    pred  = model.predict(X)
+    tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
+    return {
+        "confusion_matrix": dict(tn=int(tn), fp=int(fp), fn=int(fn), tp=int(tp)),
+        "accuracy": accuracy_score(y, pred),
+        "error_rate": 1 - accuracy_score(y, pred),
+        "precision": precision_score(y, pred, zero_division=0),
+        "recall": recall_score(y, pred, zero_division=0),
+        "specificity": tn / (tn + fp) if (tn + fp) else None,
+        "npv": tn / (tn + fn) if (tn + fn) else None,
+        "f1": f1_score(y, pred, zero_division=0),
+        "f2": fbeta_score(y, pred, beta=2, zero_division=0),
+        "balanced_accuracy": balanced_accuracy_score(y, pred),
+        "mcc": matthews_corrcoef(y, pred),
+        "roc_auc": roc_auc_score(y, proba) if y.nunique() == 2 else None,
+        "pr_auc": average_precision_score(y, proba) if y.nunique() == 2 else None,
+        "brier": brier_score_loss(y, proba),
+        "classification_report": classification_report(
+            y, pred, digits=4, output_dict=True, zero_division=0),
+    }
+
+def metricas_kmodes(km, df, props_train=None):
+    Xk = df[FEATURES_KM].astype(int).values
+    labels = km.predict(Xk)
+    cent = np.asarray(km.cluster_centroids_).astype(int)
+    dist = (Xk != cent[labels]).sum(axis=1)
+    out = {
+        "tamano_clusters": pd.Series(labels).value_counts().sort_index().to_dict(),
+        "costo_por_obs_holdout": float(dist.mean()),
+    }
+    if 1 < len(np.unique(labels)) < len(Xk):
+        out["silhouette_global"] = float(
+            silhouette_score(Xk, labels, metric="hamming"))
+        s = silhouette_samples(Xk, labels, metric="hamming")
+        out["silhouette_por_cluster"] = {
+            int(c): float(s[labels == c].mean()) for c in np.unique(labels)}
+    y = df["Outcome"].astype(int).values
+    out["nmi_vs_outcome"] = normalized_mutual_info_score(y, labels)
+    out["ari_vs_outcome"] = adjusted_rand_score(y, labels)
+    return out
+
+================================================================================
+FIN
+================================================================================

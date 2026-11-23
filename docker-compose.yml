@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  dengue-triage-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dengue_risk_triage_app
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: unless-stopped
+    volumes:
+      - ./artifacts:/app/artifacts:ro
